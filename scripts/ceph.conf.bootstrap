@@ -1,0 +1,26 @@
+[global]
+  osd_pool_default_size = 3
+  osd_pool_default_min_size = 2
+  osd_pool_default_pg_autoscale_mode = off
+  mon_pg_warn_max_object_skew = -1
+[osd]
+  osd_scrub_sleep = 0.1
+  osd_scrub_begin_hour = 20
+  osd_scrub_end_hour = 6
+  osd_scrub_priority = 1
+  osd_max_backfills = 1
+  osd_recovery_max_active = 1
+  osd_recovery_op_priority = 1
+  osd_snap_trim_priority = 1
+  osd_op_queue = wpq
+  bdev_async_discard = true
+  bdev_enable_discard = true
+  bluefs_allocator = bitmap
+  bluestore_allocator = bitmap
+[mon]
+  mon_cpu_threads = 16
+[mgr]
+  mgr/balancer/active = false
+  mgr/progress/enabled = false
+  mgr/prometheus/rbd_stats_pools = *
+  mgr/prometheus/scrape_interval = 30.000000

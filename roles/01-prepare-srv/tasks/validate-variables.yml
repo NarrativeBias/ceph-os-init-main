@@ -1,0 +1,11 @@
+- name: "validating group_vars"
+  assert:
+    that:
+    - vars[item] is defined
+    - vars[item] is not none
+    - vars[item] | length > 0
+    fail_msg: "Required variable '{{ item }}' is not set. Check group_vars/all.yaml"
+  loop:
+   - local_registry
+   - ceph_repo_ver
+  run_once: true

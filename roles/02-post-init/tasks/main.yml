@@ -1,0 +1,11 @@
+- name: configure-afterinit-users
+  import_tasks: configure-afterinit-users.yml
+
+- name: configure-ntp
+  import_tasks: configure-ntp.yml
+
+- name: configure-cluster-info
+  import_tasks: configure-cluster-info.yml
+
+- name: configure-ceph-repo
+  import_tasks: configure-ceph-repo.yml

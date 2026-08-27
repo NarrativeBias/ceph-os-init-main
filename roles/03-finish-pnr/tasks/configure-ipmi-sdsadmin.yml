@@ -1,0 +1,19 @@
+- name: Check user list
+  command: ipmitool user list 1
+  register: user_list
+  changed_when: false
+
+- name: Parse IPMI user list for sdsadmin user
+  set_fact:
+     admin_exists: "{{ user_list.stdout is search ('\\d+\\s+sdsadmin\\s+false') }}"
+  failed_when: not (user_list.stdout is search ('\\d+\\s+sdsadmin\\s+false'))
+
+- name: Extract sdsadmin user ID if it exists
+  set_fact:
+     admin_user_id: "{{ user_list.stdout | regex_search('(\\d+)\\s+sdsadmin\\s+', '\\1') | first }}"
+  when: admin_exists
+
+- name: set operational password for sdsadmin IPMI user
+  command: "ipmitool user set password {{ admin_user_id }}  {{ sdsadmin_passwd }}"
+  no_log: true
+  when: admin_exists

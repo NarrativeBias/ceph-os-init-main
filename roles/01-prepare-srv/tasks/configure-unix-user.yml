@@ -1,0 +1,49 @@
+# PROD users
+- name: create group aroot
+  group:
+    name: aroot
+    gid: 653
+    state: present
+  when: environment_type == "PROD"
+- name: create user aroot
+  user:
+    name: aroot
+    group: aroot
+    uid: 653
+    shell: /bin/bash
+    password: "{{aroot_hash}}"
+  when: environment_type == "PROD"
+- name: sudo aroot
+  copy:
+    dest: /etc/sudoers.d/aroot
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      aroot ALL = (ALL) ALL
+  when: environment_type == "PROD"
+
+# TEST Users
+- name: create group troot
+  group:
+    name: troot
+    gid: 654
+    state: present
+  when: environment_type == "TEST"
+- name: create user troot
+  user:
+    name: troot
+    group: troot
+    uid: 654
+    shell: /bin/bash
+    password: "{{troot_hash}}"
+  when: environment_type == "TEST"
+- name: sudo for troot
+  copy:
+    dest: /etc/sudoers.d/troot
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      troot ALL = (ALL) ALL
+  when: environment_type == "TEST"

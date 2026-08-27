@@ -1,0 +1,60 @@
+- set_fact:
+      ubuntu_channels: ["/ focal main restricted universe multiverse","/ focal-updates main restricted universe multiverse","/ focal-security main restricted universe multiverse"]
+      ubuntu_path: '/etc/apt/sources.list.d/'
+- find:
+    paths: "{{ ubuntu_path }}"
+    patterns: "*.list"
+  register:  file_match
+- set_fact:
+    filepath: "{{ file_match.files | map(attribute='path') | list }}"
+
+- name: configure ubuntu auto-upgrades
+  copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: 0644
+    owner: root
+    group: root
+    content: |
+      APT::Periodic::Update-Package-Lists "0";
+      APT::Periodic::Unattended-Upgrade "0";
+
+- name: "Remove default repos"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ filepath }}"
+
+- name: remove sources.list
+  file:
+    path: /etc/apt/sources.list
+    state: absent
+
+- name: "Create ubuntu repo file"
+  template:
+    src: ubuntu-repo-template.j2
+    dest: "/etc/apt/sources.list.d/ubuntu-{{ item.split(' ')[1] }}.list"
+    owner: root
+    group: root
+    mode: 0644
+  loop: "{{ vars['ubuntu_channels'] }}"
+
+- name: "Create ceph repo file"
+  template:
+    src: ceph-repo-template.j2
+    dest: "/etc/apt/sources.list.d/ceph_Ubuntu.list"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "Create ceph repo auth"
+  template:
+    src: ceph-auth-template.j2
+    dest: "/etc/apt/auth.conf.d/ceph.conf"
+    owner: root
+    group: root
+    mode: 0640
+
+- name: "Copy gpg for ceph repo"
+  copy:
+    src: files/other/ceph.gpg
+    dest: /etc/apt/trusted.gpg.d

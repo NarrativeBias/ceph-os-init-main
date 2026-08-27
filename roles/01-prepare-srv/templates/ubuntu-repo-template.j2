@@ -1,0 +1,7 @@
+{%- set repos = [] -%}
+{%- set repos_keys = [] -%}
+
+{%- for mirror in m_repo -%}
+{%- set _ = repos.append('deb ' + mirror + 'stages_ubuntu/' + 'current' + item) -%}
+{%- endfor -%}
+{{ repos|join('\n') }}

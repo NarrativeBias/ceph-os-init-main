@@ -1,0 +1,15 @@
+- name: split nvme
+  hosts: "{{ srv }}"
+  become: true
+  gather_facts: False
+  tasks:
+    - name: Copy 2_namespaces.sh
+      copy:
+        src: 2_namespaces.sh
+        dest: /tmp/2_namespaces.sh
+        mode: 0755
+    - name: Exec script 2_namespaces on remote server
+      script: 2_namespaces.sh
+      args:
+        chdir: /tmp
+

@@ -1,0 +1,9 @@
+- name: Temporary resolv.conf
+  copy:
+    dest: /etc/resolv.conf
+    mode: 0644
+    owner: root
+    group: root
+    content: |
+      nameserver {{ dns_ip }}
+      search {{ seg_fqdn }}

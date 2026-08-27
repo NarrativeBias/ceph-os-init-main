@@ -1,0 +1,9 @@
+---
+# code: language=ansible
+
+- hosts: "{{ srv }}"
+  gather_facts: false
+  become: true
+  roles:
+    - role: prepare-ceph-host
+  

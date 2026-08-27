@@ -1,0 +1,7 @@
+{%- set auth = [] -%}
+{%- set auth_keys = [] -%}
+
+{%- for mirror in m_repo -%}
+{%- set _ = auth.append('machine ' + mirror + ' login cephadm password ' + ceph_repo_auth ) -%}
+{%- endfor -%}
+{{ auth|join('\n') }}

@@ -1,0 +1,20 @@
+- name: "Configure chrony.conf"
+  template:
+    src: chrony.conf.j2
+    dest: "/etc/chrony/chrony.conf"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "Enabling chrony service"
+  systemd:
+    name: chrony
+    enabled: yes
+
+- name: "Restarting chrony service"
+  systemd:
+    name: chrony
+    state: restarted
+    daemon_reload: yes
+  when:
+    - not ansible_check_mode

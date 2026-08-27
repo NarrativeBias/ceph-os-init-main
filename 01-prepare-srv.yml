@@ -1,0 +1,11 @@
+---
+# code: language=ansible
+
+- hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  vars_files:
+    - secrets/vault.yml
+  roles:
+    - role: 01-prepare-srv
+

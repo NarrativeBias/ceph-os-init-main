@@ -1,0 +1,8 @@
+- name: configure-final-users
+  import_tasks: configure-final-users.yml
+  
+- name: configure-ipmi-sdsadmin
+  import_tasks: configure-ipmi-sdsadmin.yml
+
+- name: backup-s3-config
+  import_tasks: backup-s3-config.yml

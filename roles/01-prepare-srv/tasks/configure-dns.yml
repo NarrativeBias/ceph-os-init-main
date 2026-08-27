@@ -1,0 +1,47 @@
+- name: "config for dnsmasq"
+  template:
+    src: "dnsmasq.conf.j2"
+    dest: "/etc/dnsmasq.conf"
+    mode: 0644
+    owner: root
+    group: root
+ 
+- name: "Create resolv.dnsmasq if not exist"
+  lineinfile:
+    path: "/etc/resolv.dnsmasq"
+    state: present
+    line: "nameserver {{ dns_ip }}"
+    create: yes
+
+- name: "Enabling dnsmasq service"
+  systemd:
+    name: dnsmasq
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: "Disabling systemd-resolved"
+  systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: no
+
+- name: "Check if resolv.conf is link"
+  stat:
+    path: /etc/resolv.conf
+  register: link
+   
+- name: "Remove symlink"
+  file:
+    path: /etc/resolv.conf
+    state: absent
+  when: link.stat.islnk is defined and link.stat.islnk
+
+- name: "Config for correct resolv"
+  template:
+    src: "resolv.conf.j2"
+    dest: "/etc/resolv.conf"
+    mode: 0644
+    owner: root
+    group: root
+

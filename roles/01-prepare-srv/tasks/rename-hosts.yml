@@ -1,0 +1,3 @@
+- name: Rename hosts
+  hostname:
+    name: "{{inventory_hostname}}.{{seg_fqdn}}"

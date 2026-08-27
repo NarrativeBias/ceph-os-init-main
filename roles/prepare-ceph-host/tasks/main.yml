@@ -1,0 +1,13 @@
+- name: copy cephorch key
+  authorized_key:
+    user: cephorch
+    state: present
+    key: '{{ item }}'
+  with_file:
+    - /etc/ceph/ceph.pub
+- name: pull ceph base container
+  shell: 'podman pull {{local_registry}}/ceph/ceph:v{{ceph_repo_ver}}'
+- name: pull ceph-node-exporter container
+  shell: 'podman pull {{local_registry}}/prom/node-exporter:v1.8.2'
+
+  

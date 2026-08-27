@@ -1,0 +1,9 @@
+- name: resize partition /dev/sda3
+  command: parted -s /dev/sda resizepart 3 100%
+  register: resize_result
+
+- name: inform kernel of partiton table changes
+  command: partprobe /dev/sda
+
+- name: resize pv  /dev/sda3
+  command: pvresize /dev/sda3

@@ -1,0 +1,46 @@
+- name: Get the server manufacturer using lshw
+  shell: "sudo lshw -class system | grep vendor"
+  register: vendor_info
+  changed_when: false
+
+- name: Set vendor fact for dell
+  set_fact:
+    vendor: "dell"
+  when: "'dell' in vendor_info.stdout | lower"
+
+- name: Set vendor fact for non-dell
+  set_fact:
+    vendor: "non-dell"
+  when: "vendor is not defined"
+
+- name: copy raidcli packages
+  copy:
+    src: files/raidcli-pkgs/
+    dest: /tmp/raidcli/
+
+- name: install storcli
+  shell: "dpkg -i /tmp/raidcli/storcli_2705.deb"
+  when: vendor == "non-dell"
+
+- name: install perccli
+  shell: "dpkg -i /tmp/raidcli/perccli_1327.deb"
+  when: vendor == "dell"
+
+- name: delete raidcli packages
+  file:
+    state: absent
+    path: /tmp/raidcli
+
+- name: adding links for storcli
+  file:
+    src: /opt/MegaRAID/storcli/storcli64
+    dest: /usr/bin/storcli
+    state: link
+  when: vendor == "non-dell"
+
+- name: adding links for perccli
+  file:
+    src: /opt/MegaRAID/perccli/perccli64 
+    dest: /usr/bin/perccli
+    state: link
+  when: vendor == "dell"

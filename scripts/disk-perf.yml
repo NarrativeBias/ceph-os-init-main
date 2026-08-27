@@ -1,0 +1,30 @@
+- name: Collect performance from nodes
+  hosts: mons
+  become: true
+  gather_facts: False
+  tasks:
+    - name: Copy fio_stress_full_step1.sh
+      copy:
+        src: fio_stress_full_step1.sh
+        dest: /var/tmp/fio_stress_full.sh
+        mode: 0755
+    - name: Exec script fio_stress on remote server
+      script: /var/tmp/fio_stress_full.sh
+      args:
+        chdir: /var/tmp
+    - name: Find files to copy
+      find:
+        paths: /var/tmp/bandfio
+        recurse: no
+        pattern: "*.json"
+      register: files_to_copy
+    - name: Copy results to local server
+      fetch:
+        src: "{{ item.path }}"
+        dest: /var/tmp/results/
+        flat: yes
+      with_items: "{{ files_to_copy.files }}"
+    - name: Remove directory
+      file:
+        path: /var/tmp/bandfio
+        state: absent

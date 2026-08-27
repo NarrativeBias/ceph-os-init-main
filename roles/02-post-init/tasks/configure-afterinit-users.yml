@@ -1,0 +1,135 @@
+- name: delete user infra_duty
+  user:
+    name: infra_duty
+    state: absent
+    remove: yes
+
+- name: delete user droot
+  user:
+    name: droot
+    state: absent
+    remove: yes    
+
+- name: delete user aroot
+  user:
+    name: aroot
+    state: absent
+    remove: yes
+  when:
+    - not ansible_check_mode
+
+- name: delete user troot
+  user:
+    name: troot
+    state: absent
+    remove: yes
+
+- name: delete user proot
+  user:
+    name: proot
+    state: absent
+    remove: yes
+
+- name: delete user dutyprd
+  user:
+    name: dutyprd
+    state: absent
+    remove: yes  
+
+- name: delete user unixprd
+  user:
+    name: unixprd
+    state: absent
+    remove: yes  
+
+- name: delete user dutytst
+  user:
+    name: dutytst
+    state: absent
+    remove: yes  
+
+- name: delete user dutycde
+  user:
+    name: dutycde
+    state: absent
+    remove: yes  
+
+- name: delete user unixtst
+  user:
+    name: unixtst
+    state: absent
+    remove: yes  
+
+- name: delete user unixcde
+  user:
+    name: unixcde
+    state: absent
+    remove: yes  
+
+- name: check for existing *root, *duty and unix* users
+  find:
+   paths: /etc/sudoers.d
+   patterns:
+    - "^.root$"
+    - "^duty.*$"
+    - "^unix.*$"
+   use_regex: true
+  register: matched_sudoers
+
+- name: delete .root, duty* and unix* from sudoers
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ matched_sudoers.files }}"
+
+- name: create group aroot
+  group:
+    name: aroot
+    gid: 653
+    state: present
+
+- name: create user aroot
+  user:
+    name: aroot
+    group: aroot
+    uid: 653
+    shell: /bin/bash
+    password: "{{ aroot_postinit }}"
+
+- name: add aroot to sudoers
+  copy:
+    dest: /etc/sudoers.d/aroot
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      aroot ALL = (ALL) ALL
+
+- name: ensure aroot has no expiration on the password
+  command: chage -M -1 aroot
+  when:
+    - not ansible_check_mode
+
+- name: make sure root has no password
+  user:
+    name: root
+    password: '!'
+
+- name: Color prompt for user
+  blockinfile:
+    state: present
+    dest: .bashrc
+    content: |
+      if [ -r /etc/profile.d/ps.sh ]; then
+        . /etc/profile.d/ps.sh
+      fi
+
+- name: Color prompt for root
+  blockinfile:
+    state: present
+    dest: /root/.bashrc
+    content: |
+      if [ -r /etc/profile.d/ps.sh ]; then
+        . /etc/profile.d/ps.sh
+      fi
+

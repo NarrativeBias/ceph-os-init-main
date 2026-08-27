@@ -1,0 +1,157 @@
+# PROD users
+- name: create group psadm
+  group:
+    name: psadm
+    state: present
+    gid: 821
+  when: environment_type == "PROD"
+- name: create user
+  user:
+    name: psadm
+    shell: /bin/bash
+    uid: 821
+    group: psadm
+  when: environment_type == "PROD"
+- name: psadm pubkey
+  authorized_key:
+    user: psadm
+    state: present
+    key: "{{psadm_pubkey}}"
+  when: environment_type == "PROD"
+- name: sudo for psadm
+  copy:
+    dest: /etc/sudoers.d/psadm
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      psadm ALL = (ALL) NOPASSWD: ALL
+  when: environment_type == "PROD"
+- name: ensure psadm has no password expiration
+  command: chage -M -1 psadm
+  when: environment_type == "PROD"
+
+# TEST Users
+- name: create group tsadm
+  group:
+    name: tsadm
+    state: present
+    gid: 820
+  when: environment_type == "TEST"
+- name: create user tsadm
+  user:
+    name: tsadm
+    shell: /bin/bash
+    uid: 820
+    group: tsadm
+  when: environment_type == "TEST"
+- name: tsadm pubkey
+  authorized_key:
+    user: tsadm
+    state: present
+    key: "{{tsadm_pubkey}}"
+  when: environment_type == "TEST"
+- name: sudo for tsadm
+  copy:
+    dest: /etc/sudoers.d/tsadm
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      tsadm ALL = (ALL) NOPASSWD: ALL
+  when: environment_type == "TEST"
+- name: ensure tsadm has no password expiration
+  command: chage -M -1 tsadm
+  when: environment_type == "TEST"
+
+# DEV Users
+- name: create group dsadm
+  group:
+    name: dsadm
+    state: present
+    gid: 819
+  when: environment_type == "DEV"
+- name: create user dsadm
+  user:
+    name: dsadm
+    shell: /bin/bash
+    uid: 819
+    group: dsadm
+  when: environment_type == "DEV"
+- name: dsadm pubkey
+  authorized_key:
+    user: dsadm
+    state: present
+    key: "{{dsadm_pubkey}}"
+  when: environment_type == "DEV"
+- name: sudo for dsadm
+  copy:
+    dest: /etc/sudoers.d/dsadm
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      dsadm ALL = (ALL) NOPASSWD: ALL
+  when: environment_type == "DEV"
+- name: ensure dsadm has no password expiration
+  command: chage -M -1 dsadm
+  when: environment_type == "DEV"
+#- name: delete user tmpusr
+#  user:
+#    name: tmpusr
+#    state: absent
+#    remove: yes    
+
+- name: check if this deployment already has a cluster fsid
+  become: true
+  command: "ceph fsid"
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  register: current_fsid
+  run_once: true
+  ignore_errors: false
+
+- name: Generate ceph keys for vtbmon
+  shell: |
+    ceph auth get-or-create client.infra_duty \
+    mon 'allow r' \
+    mgr 'allow r, allow command "pg repair"' \
+    | tee /tmp/.client.infra_duty
+  delegate_to: localhost
+  when:
+    - not ansible_check_mode
+    - current_fsid.rc == 0
+
+- name: Distribute ceph keys
+  copy:
+    src: /tmp/.client.infra_duty
+    dest: /tmp/.client.infra_duty
+  when:
+    - not ansible_check_mode
+    - current_fsid.rc == 0
+
+- name: check which vtbmon is used
+  shell: 'getent passwd 181 | cut -d: -f1'
+  register: vtbmon_username
+  changed_when: false
+  when:
+   - current_fsid.rc == 0
+
+- name: Change ceph keys ownership for vtbmon and move them
+  copy:
+    remote_src: true
+    src: /tmp/.client.infra_duty
+    dest: "/etc/ceph/client.infra_duty"
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+   - current_fsid.rc == 0
+
+- name: Remove tmp ceph key
+  file:
+    path: /tmp/.client.infra_duty
+    state: absent
+  when:
+   - current_fsid.rc == 0  

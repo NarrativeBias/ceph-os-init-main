@@ -1,0 +1,43 @@
+- name: variables-validation
+  import_tasks: validate-variables.yml
+
+- name: tmp-dns
+  import_tasks: tmp-dns.yml
+
+- name: rename-hosts
+  import_tasks: rename-hosts.yml
+
+- name: configure-repo
+  import_tasks: configure-repo.yml
+
+- name: configure-initial-users
+  import_tasks: configure-initial-users.yml
+
+- name: update-and-install-generic-packages
+  import_tasks: update-and-install-generic-packages.yml
+
+- name: configure-podman
+  import_tasks: configure-podman.yml
+
+- name: install-ceph-packages
+  import_tasks: install-ceph-packages.yml
+
+- name: configure-dns
+  import_tasks: configure-dns.yml
+
+- name: configure-ntp
+  import_tasks: configure-ntp.yml
+
+- name: configure-os
+  import_tasks: configure-os.yml
+
+- name: configure-raidcli
+  import_tasks: configure-raidcli.yml
+  tags:
+    - raidcli
+
+- name: pv-extend
+  import_tasks: pv-extend.yml
+
+- name: configure-unix-user
+  import_tasks: configure-unix-user.yml

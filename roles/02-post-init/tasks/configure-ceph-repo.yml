@@ -1,0 +1,7 @@
+- name: "Create ceph repo file"
+  template:
+    src: ceph-repo-template.j2
+    dest: "/etc/apt/sources.list.d/ceph_Ubuntu.list"
+    owner: root
+    group: root
+    mode: 0644

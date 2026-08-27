@@ -1,0 +1,24 @@
+
+- name: Check if ceph-s3-init-main exists in home folder of tmpusr
+  stat:
+    path: /home/tmpusr/ceph-s3-init-main
+  delegate_to: localhost
+  register: s3_folder_check
+  run_once: true
+
+- name: Get target user home dir based on env
+  shell: "eval echo ~{{ { 'DEV': 'dsadm', 'TEST': 'tsadm', 'PROD': 'psadm'}[environment_type] | default('tsadm') }}"
+  delegate_to: localhost
+  register: user_home
+  run_once: true
+  changed_when: false
+  when: s3_folder_check.stat.exists and s3_folder_check.stat.isdir
+
+- name: Move s3 init folder 
+  copy:
+    src: /home/tmpusr/ceph-s3-init-main
+    dest: "{{ user_home.stdout}}/ceph-s3-init-main"
+    remote_src: yes
+  delegate_to: localhost
+  run_once: true
+  when: s3_folder_check.stat.exists and s3_folder_check.stat.isdir
