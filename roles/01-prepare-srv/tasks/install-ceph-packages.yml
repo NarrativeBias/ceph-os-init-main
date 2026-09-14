@@ -1,14 +1,9 @@
 - name: Install cephadm
   apt:
-    name: cephadm={{ceph_repo_ver}}-1focal
+    name: "cephadm={{ ceph_repo_ver }}-1{{ ubuntu_codename }}"
     state: present
     update_cache: yes
 
-- name: Install ceph-common
-  apt:
-    name: ceph-common={{ceph_repo_ver}}-1focal
-    state: present
-    update_cache: yes
 
 - name: Change permissions for /var/lib/ceph
   file:

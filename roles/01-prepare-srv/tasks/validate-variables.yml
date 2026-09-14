@@ -1,3 +1,12 @@
+- name: "validating Ubuntu release"
+  assert:
+    that:
+      - ansible_distribution == 'Ubuntu'
+      - ansible_distribution_release == ubuntu_codename
+    fail_msg: >-
+      Unsupported OS '{{ ansible_distribution }} {{ ansible_distribution_release }}'.
+      Required: Ubuntu {{ ubuntu_codename }} (24.04).
+
 - name: "validating group_vars"
   assert:
     that:

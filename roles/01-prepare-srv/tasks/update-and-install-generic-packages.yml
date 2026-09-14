@@ -10,7 +10,7 @@
       - chrony
       - wget
       - curl
-      - python-apt
+      - python3-apt
       - python-apt-common
       - net-tools
       - ifenslave
@@ -20,6 +20,7 @@
       - nvme-cli
       - lldpd
       - jq
+      - ethtool
 
 - name: apt-get upgrade
   apt:

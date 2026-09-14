@@ -1,7 +1,6 @@
 {%- set repos = [] -%}
-{%- set repos_keys = [] -%}
 
 {%- for mirror in m_repo -%}
-{%- set _ = repos.append('deb ' + ' ' + mirror + 'ubuntu_other/ceph/debian-' + ceph_repo_ver + '/ focal main') -%}
+{%- set _ = repos.append('deb ' + ' ' + mirror + 'ubuntu_other/ceph/debian-' + ceph_repo_ver + '/ ' + ubuntu_codename + ' main') -%}
 {%- endfor -%}
 {{ repos|join('\n') }}

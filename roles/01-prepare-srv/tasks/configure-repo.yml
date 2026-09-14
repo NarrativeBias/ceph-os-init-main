@@ -1,10 +1,17 @@
 - set_fact:
-      ubuntu_channels: ["/ focal main restricted universe multiverse","/ focal-updates main restricted universe multiverse","/ focal-security main restricted universe multiverse"]
+      ubuntu_channels:
+        - "/ {{ ubuntu_codename }} main restricted universe multiverse"
+        - "/ {{ ubuntu_codename }}-updates main restricted universe multiverse"
+        - "/ {{ ubuntu_codename }}-security main restricted universe multiverse"
       ubuntu_path: '/etc/apt/sources.list.d/'
+
 - find:
     paths: "{{ ubuntu_path }}"
-    patterns: "*.list"
-  register:  file_match
+    patterns:
+      - "*.list"
+      - "*.sources"
+  register: file_match
+
 - set_fact:
     filepath: "{{ file_match.files | map(attribute='path') | list }}"
 
@@ -36,7 +43,7 @@
     owner: root
     group: root
     mode: 0644
-  loop: "{{ vars['ubuntu_channels'] }}"
+  loop: "{{ ubuntu_channels }}"
 
 - name: "Create ceph repo file"
   template:

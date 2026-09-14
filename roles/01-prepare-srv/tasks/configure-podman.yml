@@ -1,33 +1,7 @@
-- name: instal pkgs for podman
-  apt:
-    pkg:
-      - libnet1
-      - libprotobuf-c1
-      - libprotobuf17
-      - libyajl2
-      - python3-protobuf
-  
-- name: check podman installation status
-  command: dpkg-query -W podman
-  register: podman_check
-  failed_when: false
-  changed_when: false
-
-- name: copy podman packages
-  copy:
-    src: files/podman-pkgs/
-    dest: /tmp/podman/
-  when: podman_check.rc !=0
-
 - name: install podman
-  shell: "dpkg -i /tmp/podman/*deb"
-  when: podman_check.rc !=0
-
-- name: delete podman packages
-  file:
-    state: absent
-    path: /tmp/podman
-  when: podman_check.rc !=0
+  apt:
+    name: podman
+    state: present
 
 - name: configure insecure registry
   copy:
@@ -37,18 +11,17 @@
     group: root
     content: |
       [[registry]]
-      location="{{local_registry}}"
-      insecure=true
+      location = "{{ local_registry }}"
+      insecure = true
 
-- name: configure insecure search
+- name: configure unqualified search registries
   copy:
     dest: /etc/containers/registries.conf
     mode: 0644
     owner: root
     group: root
     content: |
-      unqualified-search-registries = ["{{local_registry}}"]
-      insecure=true
+      unqualified-search-registries = ["{{ local_registry }}"]
 
 - name: configure TZ for podman
   copy:
