@@ -1,46 +1,59 @@
-- name: "config for dnsmasq"
-  template:
-    src: "dnsmasq.conf.j2"
-    dest: "/etc/dnsmasq.conf"
-    mode: 0644
-    owner: root
-    group: root
- 
-- name: "Create resolv.dnsmasq if not exist"
-  lineinfile:
-    path: "/etc/resolv.dnsmasq"
-    state: present
-    line: "nameserver {{ dns_ip }}"
-    create: yes
-
-- name: "Enabling dnsmasq service"
-  systemd:
-    name: dnsmasq
-    state: restarted
-    enabled: yes
-    daemon_reload: yes
-
-- name: "Disabling systemd-resolved"
-  systemd:
+---
+- name: disable systemd-resolved
+  ansible.builtin.systemd:
     name: systemd-resolved
     state: stopped
-    enabled: no
+    enabled: false
 
-- name: "Check if resolv.conf is link"
-  stat:
-    path: /etc/resolv.conf
-  register: link
-   
-- name: "Remove symlink"
-  file:
-    path: /etc/resolv.conf
-    state: absent
-  when: link.stat.islnk is defined and link.stat.islnk
+# Critical on Ubuntu 24.04: systemd-helper + resolvconf adds a second resolv
+# source; with no-poll that makes dnsmasq fail to start. Colleague playbooks
+# usually do not touch /etc/default/dnsmasq, so this survives their re-runs.
+- name: ignore resolvconf integration for dnsmasq
+  ansible.builtin.lineinfile:
+    path: /etc/default/dnsmasq
+    regexp: '^#?IGNORE_RESOLVCONF='
+    line: IGNORE_RESOLVCONF=yes
+    create: true
 
-- name: "Config for correct resolv"
-  template:
-    src: "resolv.conf.j2"
-    dest: "/etc/resolv.conf"
-    mode: 0644
+- name: configure dnsmasq
+  ansible.builtin.template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+    mode: "0644"
     owner: root
     group: root
+
+- name: create resolv.dnsmasq with upstream DNS
+  ansible.builtin.copy:
+    dest: /etc/resolv.dnsmasq
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      nameserver {{ dns_ip }}
+
+- name: check if resolv.conf is a symlink
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: resolv_conf_stat
+
+- name: remove resolv.conf symlink
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: resolv_conf_stat.stat.islnk | default(false)
+
+- name: point OS resolver at local dnsmasq
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: enable and start dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: restarted
+    enabled: true
+    daemon_reload: true
