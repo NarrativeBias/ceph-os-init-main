@@ -1,0 +1,13 @@
+---
+# Map environment_type -> unix team admin account
+unix_users:
+  PROD:
+    name: aroot
+    uid: 653
+    gid: 653
+    password_var: aroot_hash
+  TEST:
+    name: troot
+    uid: 654
+    gid: 654
+    password_var: troot_hash

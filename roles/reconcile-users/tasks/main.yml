@@ -1,0 +1,76 @@
+---
+- name: remove bootstrap / init users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: true
+  loop: "{{ users_to_remove }}"
+
+- name: check for existing *root, duty* and unix* sudoers
+  ansible.builtin.find:
+    paths: /etc/sudoers.d
+    patterns:
+      - "^.root$"
+      - "^duty.*$"
+      - "^unix.*$"
+    use_regex: true
+  register: matched_sudoers
+
+- name: delete leftover *root, duty* and unix* sudoers
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ matched_sudoers.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: create group aroot
+  ansible.builtin.group:
+    name: aroot
+    gid: 653
+    state: present
+
+- name: create user aroot
+  ansible.builtin.user:
+    name: aroot
+    group: aroot
+    uid: 653
+    shell: /bin/bash
+    password: "{{ aroot_postinit }}"
+    password_expire_max: -1
+
+- name: add aroot to sudoers
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/aroot
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      aroot ALL = (ALL) ALL
+
+- name: lock root password
+  ansible.builtin.user:
+    name: root
+    password: "!"
+
+- name: color prompt for aroot
+  ansible.builtin.blockinfile:
+    path: /home/aroot/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - COLOR PROMPT"
+    block: |
+      if [ -r /etc/profile.d/ps.sh ]; then
+        . /etc/profile.d/ps.sh
+      fi
+    create: true
+    owner: aroot
+    group: aroot
+    mode: "0644"
+
+- name: color prompt for root
+  ansible.builtin.blockinfile:
+    path: /root/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - COLOR PROMPT"
+    block: |
+      if [ -r /etc/profile.d/ps.sh ]; then
+        . /etc/profile.d/ps.sh
+      fi

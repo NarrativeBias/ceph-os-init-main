@@ -1,0 +1,41 @@
+---
+- name: validating Ubuntu release
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_release == ubuntu_codename
+    fail_msg: >-
+      Unsupported OS '{{ ansible_distribution }} {{ ansible_distribution_release }}'.
+      Required: Ubuntu {{ ubuntu_codename }} (24.04).
+
+- name: validating environment_type
+  ansible.builtin.assert:
+    that:
+      - environment_type is defined
+      - environment_type in supported_environment_types
+    fail_msg: >-
+      environment_type must be one of {{ supported_environment_types | join(', ') }}
+      (got '{{ environment_type | default('undefined') }}').
+  run_once: true
+
+- name: validating required group_vars / vault variables
+  ansible.builtin.assert:
+    that:
+      - vars[item] is defined
+      - vars[item] is not none
+      - vars[item] | length > 0
+    fail_msg: "Required variable '{{ item }}' is not set. Check group_vars and secrets/vault.yml."
+  loop: "{{ preflight_required_vars }}"
+  run_once: true
+
+- name: validating environment-specific vault variables
+  ansible.builtin.assert:
+    that:
+      - vars[item] is defined
+      - vars[item] is not none
+      - vars[item] | length > 0
+    fail_msg: >-
+      Required variable '{{ item }}' for environment_type={{ environment_type }}
+      is not set. Check secrets/vault.yml.
+  loop: "{{ preflight_env_required_vars[environment_type] }}"
+  run_once: true

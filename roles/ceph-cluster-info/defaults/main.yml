@@ -1,0 +1,3 @@
+---
+# Minimum number of hosts required in inventory group [mons]
+ceph_mons_min_count: 3

@@ -1,0 +1,33 @@
+---
+- name: require mons inventory group to be complete
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length >= ceph_mons_min_count
+    fail_msg: >-
+      Inventory group 'mons' is missing or incomplete
+      ({{ groups['mons'] | default([]) | length }} host(s); need at least {{ ceph_mons_min_count }}).
+      Add all monitor hosts to [mons] before running this playbook.
+  run_once: true
+
+- name: require targeted hosts to include at least one mon
+  ansible.builtin.assert:
+    that:
+      - (ansible_play_hosts_all | intersect(groups['mons'])) | length > 0
+    fail_msg: >-
+      None of the targeted hosts are members of inventory group 'mons'.
+      Target the mon hosts (or a group that includes them) so ceph_cluster.info can be written.
+  run_once: true
+
+- name: collect mons info
+  ansible.builtin.set_fact:
+    mgr_nodes: "{{ groups['mons'] | map('regex_replace', '^(.*)$', '\\1.' + seg_fqdn) | join('; ') }}"
+  when: inventory_hostname in groups['mons']
+
+- name: generate /home/cephorch/ceph_cluster.info
+  ansible.builtin.template:
+    src: ceph_cluster-info.j2
+    dest: /home/cephorch/ceph_cluster.info
+    owner: root
+    mode: "0644"
+  when: inventory_hostname in groups['mons']

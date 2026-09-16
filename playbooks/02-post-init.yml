@@ -1,0 +1,19 @@
+---
+# code: language=ansible
+
+- hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../secrets/vault.yml
+  roles:
+    - role: preflight
+      tags: [preflight]
+    - role: reconcile-users
+      tags: [users]
+    - role: ntp
+      tags: [network, ntp]
+    - role: ceph-cluster-info
+      tags: [ceph]
+    - role: refresh-ceph-repo
+      tags: [packages, repos, ceph]

@@ -1,0 +1,17 @@
+---
+# code: language=ansible
+
+- hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../secrets/vault.yml
+  roles:
+    - role: preflight
+      tags: [preflight]
+    - role: production-users
+      tags: [users]
+    - role: ipmi-sdsadmin
+      tags: [ipmi]
+    - role: relocate-s3-init
+      tags: [s3]

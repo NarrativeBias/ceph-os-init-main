@@ -1,0 +1,38 @@
+---
+- name: select production admin for environment
+  ansible.builtin.set_fact:
+    prod_admin: "{{ production_admins[environment_type] }}"
+  when: environment_type in production_admins
+
+- name: create production admin group
+  ansible.builtin.group:
+    name: "{{ prod_admin.name }}"
+    gid: "{{ prod_admin.gid }}"
+    state: present
+  when: prod_admin is defined
+
+- name: create production admin user
+  ansible.builtin.user:
+    name: "{{ prod_admin.name }}"
+    group: "{{ prod_admin.name }}"
+    uid: "{{ prod_admin.uid }}"
+    shell: /bin/bash
+    password_expire_max: -1
+  when: prod_admin is defined
+
+- name: install production admin SSH key
+  ansible.builtin.authorized_key:
+    user: "{{ prod_admin.name }}"
+    state: present
+    key: "{{ lookup('vars', prod_admin.name ~ '_pubkey') }}"
+  when: prod_admin is defined
+
+- name: sudo for production admin
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ prod_admin.name }}"
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      {{ prod_admin.name }} ALL = (ALL) NOPASSWD: ALL
+  when: prod_admin is defined

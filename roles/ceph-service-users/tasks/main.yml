@@ -1,0 +1,52 @@
+---
+- name: Change skel bashrc
+  ansible.builtin.blockinfile:
+    path: /etc/skel/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - INITIAL USERS"
+    block: |
+      export HISTTIMEFORMAT='%F %T '
+      export HISTSIZE=10000
+      export HISTCONTROL=ignorespace
+      if [ -r /etc/profile.d/ps.sh ]; then
+        . /etc/profile.d/ps.sh
+      fi
+
+- name: create group cephorch
+  group:
+    name: cephorch
+    gid: 168
+    state: present
+
+- name: create user cephorch
+  user:
+    name: cephorch
+    uid: 168
+    group: cephorch
+    state: present
+    password_expire_max: -1
+
+- name: sudo for user cephorch
+  copy:
+    dest: /etc/sudoers.d/cephorch
+    owner: root
+    group: root
+    mode: 0440
+    content: |
+      cephorch ALL = (ALL) NOPASSWD: ALL
+
+- name: create group ceph
+  group:
+    name: ceph
+    gid: 167
+    state: present
+
+- name: create user ceph
+  user:
+    name: ceph
+    home: /var/lib/ceph
+    shell: /usr/sbin/nologin
+    uid: 167
+    group: ceph
+    state: present
+    password_expire_max: -1
+

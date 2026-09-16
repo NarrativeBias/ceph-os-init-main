@@ -1,0 +1,32 @@
+---
+- name: select unix user for environment
+  ansible.builtin.set_fact:
+    unix_user: "{{ unix_users[environment_type] }}"
+  when: environment_type in unix_users
+
+- name: create unix user group
+  ansible.builtin.group:
+    name: "{{ unix_user.name }}"
+    gid: "{{ unix_user.gid }}"
+    state: present
+  when: unix_user is defined
+
+- name: create unix user
+  ansible.builtin.user:
+    name: "{{ unix_user.name }}"
+    group: "{{ unix_user.name }}"
+    uid: "{{ unix_user.uid }}"
+    shell: /bin/bash
+    password: "{{ lookup('vars', unix_user.password_var) }}"
+    password_expire_max: -1
+  when: unix_user is defined
+
+- name: sudo for unix user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ unix_user.name }}"
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      {{ unix_user.name }} ALL = (ALL) ALL
+  when: unix_user is defined

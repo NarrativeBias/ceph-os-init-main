@@ -1,0 +1,28 @@
+---
+supported_environment_types:
+  - DEV
+  - TEST
+  - PROD
+
+# Always required (group_vars / vault)
+preflight_required_vars:
+  - local_registry
+  - ceph_repo_ver
+  - environment_type
+  - dns_ip
+  - seg_fqdn
+  - ntp_ip
+  - m_repo
+  - aroot_postinit
+  - sdsadmin_passwd
+
+# Extra vault vars per environment_type
+preflight_env_required_vars:
+  PROD:
+    - aroot_hash
+    - psadm_pubkey
+  TEST:
+    - troot_hash
+    - tsadm_pubkey
+  DEV:
+    - dsadm_pubkey

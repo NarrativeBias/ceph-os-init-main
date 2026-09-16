@@ -1,0 +1,15 @@
+---
+# Map environment_type -> production ops admin
+production_admins:
+  PROD:
+    name: psadm
+    uid: 821
+    gid: 821
+  TEST:
+    name: tsadm
+    uid: 820
+    gid: 820
+  DEV:
+    name: dsadm
+    uid: 819
+    gid: 819

@@ -1,0 +1,137 @@
+---
+- name: get current timezone
+  ansible.builtin.command: timedatectl show -p Timezone --value
+  register: current_tz
+  changed_when: false
+
+- name: set timezone to Europe/Moscow
+  ansible.builtin.command: timedatectl set-timezone Europe/Moscow
+  when: current_tz.stdout != "Europe/Moscow"
+
+- name: configure root shell history
+  ansible.builtin.blockinfile:
+    path: /root/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - HISTORY"
+    block: |
+      export HISTTIMEFORMAT='%F %T '
+      export HISTSIZE=10000
+      export HISTCONTROL=ignorespace
+
+- name: remove unused packages
+  ansible.builtin.apt:
+    name:
+      - snapd
+      - cloud-init
+      - aide
+      - ufw
+      - cloud-guest-utils
+    state: absent
+    purge: true
+    autoremove: true
+
+- name: disable apparmor service
+  ansible.builtin.systemd:
+    name: apparmor
+    state: stopped
+    enabled: false
+
+- name: disable apparmor in grub
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/apparmor.cfg
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX apparmor=0"
+
+- name: grub settings for Ceph
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/ceph.cfg
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} nosoftlockup noautogroup mitigations=off"
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} processor.max_cstate=1 intel_idle.max_cstate=0 idle=halt cpuidle.off=1"
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} transparent_hugepage=madvise"
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} cpufreq.default_governor=performance"
+
+- name: update grub
+  ansible.builtin.command: update-grub2
+  changed_when: true
+
+- name: disable systemd pager via pam_env
+  ansible.builtin.lineinfile:
+    path: /etc/security/pam_env.conf
+    line: SYSTEMD_PAGER DEFAULT=""
+
+- name: configure cron.d sysstat
+  ansible.builtin.copy:
+    dest: /etc/cron.d/sysstat
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      PATH=/usr/lib/sysstat:/usr/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+      53 23 * * * root /usr/lib/sysstat/sa2 -A
+      */1 * * * * root /usr/lib/sysstat/sa1 1 1
+
+- name: sysctl settings for Ceph
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-ceph.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      kernel.pid_max=4194303
+      fs.file-max=26234859
+      fs.aio-max-nr=50000000
+      vm.zone_reclaim_mode=0
+      vm.vfs_cache_pressure=60
+      vm.swappiness=10
+      net.core.rmem_max=16777216
+      net.core.wmem_max=16777216
+      net.core.rmem_default=4194304
+      net.core.wmem_default=4194304
+      net.core.optmem_max=4194304
+      net.ipv4.tcp_rmem = 4096 87380 16777216
+      net.ipv4.tcp_wmem = 4096 16384 16777216
+      net.ipv4.tcp_sack=1
+      net.ipv4.tcp_timestamps=0
+      net.ipv4.tcp_adv_win_scale=1
+      net.core.somaxconn=32768
+      net.core.netdev_max_backlog=50000
+      net.ipv4.tcp_fin_timeout=20
+      vm.min_free_kbytes=4194304
+      net.ipv4.tcp_slow_start_after_idle=0
+      kernel.sched_autogroup_enabled=0
+      net.ipv4.tcp_mtu_probing=0
+
+- name: install NIC ring-buffer hook
+  ansible.builtin.copy:
+    dest: /etc/networkd-dispatcher/routable.d/50-change-buffer
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/sh
+      for i in $(ip link show type bond_slave | grep UP | awk -F\: '{print $2}'); do
+        ethtool -G $i tx $(ethtool -g $i | grep "Pre-set maximums" -A 4 | grep "TX:" | awk '{print $2}')
+        ethtool -G $i rx $(ethtool -g $i | grep "Pre-set maximums" -A 4 | grep "RX:" | awk '{print $2}')
+      done
+
+- name: find netplan configs
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns: "*.yaml"
+  register: netplan_files
+
+- name: restrict netplan config permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "0600"
+    owner: root
+    group: root
+  loop: "{{ netplan_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"

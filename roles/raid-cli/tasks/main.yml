@@ -1,0 +1,52 @@
+---
+- name: detect RAID vendor
+  ansible.builtin.set_fact:
+    raid_vendor: "{{ 'dell' if 'dell' in (ansible_system_vendor | default('') | lower) else 'non-dell' }}"
+
+- name: set RAID CLI paths
+  ansible.builtin.set_fact:
+    raid_cli_bin: "{{ '/opt/MegaRAID/perccli/perccli64' if raid_vendor == 'dell' else '/opt/MegaRAID/storcli/storcli64' }}"
+    raid_cli_link: "{{ '/usr/bin/perccli' if raid_vendor == 'dell' else '/usr/bin/storcli' }}"
+    raid_cli_deb: "{{ 'perccli_1327.deb' if raid_vendor == 'dell' else 'storcli_2705.deb' }}"
+
+- name: check if RAID CLI binary is installed
+  ansible.builtin.stat:
+    path: "{{ raid_cli_bin }}"
+  register: raid_cli_bin_stat
+
+- name: check if RAID CLI link exists
+  ansible.builtin.stat:
+    path: "{{ raid_cli_link }}"
+  register: raid_cli_link_stat
+
+- name: set RAID CLI install flags
+  ansible.builtin.set_fact:
+    raid_cli_ready: >-
+      {{ raid_cli_bin_stat.stat.exists
+         and raid_cli_link_stat.stat.exists
+         and raid_cli_link_stat.stat.islnk
+         and raid_cli_link_stat.stat.lnk_source == raid_cli_bin }}
+
+- name: copy raid-cli package
+  ansible.builtin.copy:
+    src: "raidcli-pkgs/{{ raid_cli_deb }}"
+    dest: "/tmp/{{ raid_cli_deb }}"
+  when: not raid_cli_bin_stat.stat.exists
+
+- name: install raid-cli package
+  ansible.builtin.apt:
+    deb: "/tmp/{{ raid_cli_deb }}"
+  when: not raid_cli_bin_stat.stat.exists
+
+- name: remove temporary raid-cli package
+  ansible.builtin.file:
+    state: absent
+    path: "/tmp/{{ raid_cli_deb }}"
+  when: not raid_cli_bin_stat.stat.exists
+
+- name: link raid-cli into PATH
+  ansible.builtin.file:
+    src: "{{ raid_cli_bin }}"
+    dest: "{{ raid_cli_link }}"
+    state: link
+  when: not raid_cli_ready | bool

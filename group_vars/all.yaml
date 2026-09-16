@@ -1,2 +1,5 @@
-local_registry: 
-ceph_repo_ver: 
+local_registry:
+ceph_repo_ver:
+node_exporter_ver: 1.8.2
+# Target OS: Ubuntu 24.04 (noble)
+ubuntu_codename: noble

@@ -1,0 +1,13 @@
+---
+users_to_remove:
+  - infra_duty
+  - droot
+  - aroot
+  - troot
+  - proot
+  - dutyprd
+  - unixprd
+  - dutytst
+  - dutycde
+  - unixtst
+  - unixcde

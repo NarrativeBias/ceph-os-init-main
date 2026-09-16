@@ -1,0 +1,5 @@
+- name: Install cephadm
+  apt:
+    name: "cephadm={{ ceph_repo_ver }}-1{{ ubuntu_codename }}"
+    state: present
+    update_cache: yes

@@ -1,0 +1,31 @@
+---
+- name: check if ceph-s3-init-main exists under tmpusr
+  ansible.builtin.stat:
+    path: /home/tmpusr/ceph-s3-init-main
+  delegate_to: localhost
+  register: s3_folder_check
+  run_once: true
+
+- name: map environment to production admin home
+  ansible.builtin.set_fact:
+    s3_target_user: "{{ {'DEV': 'dsadm', 'TEST': 'tsadm', 'PROD': 'psadm'}[environment_type] | default('tsadm') }}"
+  run_once: true
+  when: s3_folder_check.stat.exists and s3_folder_check.stat.isdir
+
+- name: resolve target user home directory
+  ansible.builtin.shell: "getent passwd {{ s3_target_user }} | cut -d: -f6"
+  delegate_to: localhost
+  register: s3_user_home
+  run_once: true
+  changed_when: false
+  when: s3_folder_check.stat.exists and s3_folder_check.stat.isdir
+
+- name: move s3 init folder from tmpusr to production admin
+  ansible.builtin.command: "mv /home/tmpusr/ceph-s3-init-main {{ s3_user_home.stdout }}/ceph-s3-init-main"
+  delegate_to: localhost
+  run_once: true
+  when:
+    - s3_folder_check.stat.exists
+    - s3_folder_check.stat.isdir
+    - s3_user_home.stdout is defined
+    - s3_user_home.stdout | length > 0
