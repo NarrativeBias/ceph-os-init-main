@@ -1,0 +1,99 @@
+---
+- name: resolve cert domain from seg_fqdn
+  ansible.builtin.set_fact:
+    sssd_cert_domain: "{{ item }}"
+  loop: "{{ sssd_tls_domains }}"
+  when:
+    - sssd_cert_domain is not defined
+    - item == seg_fqdn or seg_fqdn.endswith('.' + item)
+
+- name: require a known cert domain for seg_fqdn
+  ansible.builtin.assert:
+    that:
+      - sssd_cert_domain is defined
+      - sssd_cert_domain | length > 0
+    fail_msg: >-
+      seg_fqdn '{{ seg_fqdn }}' does not match any configured SSSD TLS domain
+      ({{ sssd_tls_domains | join(', ') }}).
+
+- name: discover CA certificates on controller
+  ansible.builtin.find:
+    paths: "{{ sssd_certs_base }}/{{ sssd_cert_domain }}"
+    patterns:
+      - "*.crt"
+    file_type: file
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: sssd_ca_cert_files
+
+- name: require at least one CA certificate for domain
+  ansible.builtin.assert:
+    that:
+      - sssd_ca_cert_files.matched | int > 0
+    fail_msg: >-
+      No .crt certificates found in {{ sssd_certs_base }}/{{ sssd_cert_domain }}/
+      (expected chain files: root + intermediates).
+  run_once: true
+
+- name: ensure sssd and ca-certificates are installed
+  ansible.builtin.apt:
+    name:
+      - sssd
+      - ca-certificates
+    state: present
+
+- name: install domain CA certificates into system trust store
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ sssd_ca_certificates_dir }}/{{ item.path | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ sssd_ca_cert_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: sssd_ca_copy
+
+- name: update system CA certificates
+  ansible.builtin.command: update-ca-certificates
+  when: sssd_ca_copy is changed
+
+- name: ensure sssd.conf exists
+  ansible.builtin.stat:
+    path: "{{ sssd_conf_path }}"
+  register: sssd_conf_stat
+
+- name: require existing sssd.conf
+  ansible.builtin.assert:
+    that:
+      - sssd_conf_stat.stat.exists
+    fail_msg: "{{ sssd_conf_path }} is missing; join AD / create sssd.conf before enabling TLS."
+
+- name: require domain section in sssd.conf
+  ansible.builtin.command: "grep -F '[domain/{{ sssd_cert_domain }}]' {{ sssd_conf_path }}"
+  register: sssd_domain_section
+  changed_when: false
+  failed_when: sssd_domain_section.rc != 0
+
+- name: enable ldap_id_use_start_tls in domain section
+  ansible.builtin.lineinfile:
+    path: "{{ sssd_conf_path }}"
+    regexp: '^ldap_id_use_start_tls\s*='
+    line: "ldap_id_use_start_tls = {{ sssd_ldap_id_use_start_tls | bool | ternary('True', 'False') }}"
+    insertafter: "^\\[domain/{{ sssd_cert_domain }}\\]"
+  register: sssd_conf_tls
+
+- name: ensure sssd.conf permissions
+  ansible.builtin.file:
+    path: "{{ sssd_conf_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: restart sssd
+  ansible.builtin.systemd:
+    name: sssd
+    state: restarted
+    enabled: true
+  when: sssd_ca_copy is changed or sssd_conf_tls is changed

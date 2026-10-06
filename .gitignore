@@ -2,6 +2,8 @@
 /group_vars/*yml
 uploads/*
 certs/*
+secrets/certs/**
+!secrets/certs/**/.gitkeep
 output/*
 
 .vscode

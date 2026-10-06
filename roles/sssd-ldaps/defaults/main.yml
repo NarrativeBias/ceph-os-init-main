@@ -1,0 +1,15 @@
+---
+# Domains that have CA material under secrets/certs/<domain>/
+# Longer / more specific names first (first match wins).
+sssd_tls_domains:
+  - vtbgroup.vtb.com
+  - region.vtb.ru
+  - test.vtb.ru
+  - inet.vtb
+  - cde.vtb
+
+sssd_ca_certificates_dir: /usr/local/share/ca-certificates
+sssd_conf_path: /etc/sssd/sssd.conf
+sssd_ldap_id_use_start_tls: true
+# Repo-root secrets/certs when inventory lives at repo root (see ansible layout)
+sssd_certs_base: "{{ inventory_dir }}/secrets/certs"

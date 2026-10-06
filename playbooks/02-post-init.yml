@@ -17,3 +17,5 @@
       tags: [ceph]
     - role: refresh-ceph-repo
       tags: [packages, repos, ceph]
+    - role: sssd-ldaps
+      tags: [sssd, ldap, tls]

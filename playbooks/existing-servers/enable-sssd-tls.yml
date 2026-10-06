@@ -1,0 +1,28 @@
+---
+# code: language=ansible
+#
+# Enable SSSD StartTLS + install domain CA certs on already-deployed hosts.
+# Does not run the rest of 02-post-init (users, ntp, ceph-cluster-info, etc.).
+#
+# Prerequisites:
+#   - inventory at repo root (so group_vars + secrets/certs resolve)
+#   - seg_fqdn set for the target group
+#   - secrets/certs/<domain>/*.crt present on the controller
+#   - hosts already domain-joined with /etc/sssd/sssd.conf
+#
+# Usage:
+#   ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -e srv=<group>
+
+- hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: require seg_fqdn
+      ansible.builtin.assert:
+        that:
+          - seg_fqdn is defined
+          - seg_fqdn | length > 0
+        fail_msg: "seg_fqdn must be set in group_vars for this inventory group."
+  roles:
+    - role: sssd-ldaps
+      tags: [sssd, ldap, tls]
