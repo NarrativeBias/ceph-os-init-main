@@ -6,7 +6,7 @@
   with_file:
     - /etc/ceph/ceph.pub
 - name: pull ceph base container
-  shell: 'podman pull {{ local_registry }}/ceph/ceph:v{{ ceph_repo_ver }}'
+  shell: 'podman pull {{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}'
 - name: pull ceph-node-exporter container
   shell: 'podman pull {{ local_registry }}/prom/node-exporter:v{{ node_exporter_ver }}'
 
