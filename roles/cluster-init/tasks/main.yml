@@ -1,0 +1,67 @@
+---
+# New cluster only. The first host in [mons] (inventory order) becomes the
+# Ansible controller for the cluster.
+
+- name: require mons group
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+      - groups['mons'][0] in ansible_play_hosts_all
+    fail_msg: >-
+      Inventory group 'mons' must list the monitors, and its first host
+      must be part of this play.
+  run_once: true
+
+- name: locate the inventory file in use
+  ansible.builtin.stat:
+    path: "{{ ansible_inventory_sources[0] }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: controller_inventory
+
+- name: inventory source must be a file
+  ansible.builtin.assert:
+    that:
+      - controller_inventory.stat.exists | default(false)
+      - controller_inventory.stat.isreg | default(false)
+    fail_msg: >-
+      The current inventory must be a single file so it can be copied to
+      {{ mon_ansible_inventory }} on {{ groups['mons'][0] }}.
+      Got '{{ ansible_inventory_sources[0] | default('undefined') }}'.
+  run_once: true
+
+- name: install ansible and sshpass on the first mon
+  ansible.builtin.apt:
+    name: "{{ mon_ansible_packages }}"
+    state: present
+    update_cache: true
+  when:
+    - inventory_hostname == groups['mons'][0]
+    - mon_ansible_packages | length > 0
+
+- name: create /etc/ansible on the first mon
+  ansible.builtin.file:
+    path: "{{ mon_ansible_dir }}"
+    state: directory
+    mode: "0755"
+  when: inventory_hostname == groups['mons'][0]
+
+- name: copy the inventory to the first mon
+  ansible.builtin.copy:
+    src: "{{ ansible_inventory_sources[0] }}"
+    dest: "{{ mon_ansible_inventory }}"
+    mode: "0644"
+  when: inventory_hostname == groups['mons'][0]
+
+- name: write ansible.cfg on the first mon
+  ansible.builtin.copy:
+    dest: "{{ mon_ansible_cfg }}"
+    mode: "0644"
+    content: |
+      [defaults]
+      host_key_checking = False
+  when: inventory_hostname == groups['mons'][0]
+
+- ansible.builtin.import_tasks: registry.yml

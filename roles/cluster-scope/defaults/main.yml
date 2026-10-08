@@ -1,0 +1,8 @@
+---
+cluster_actions:
+  - init
+  - extend
+
+# [vse] lists the servers in the cluster. [new] lists the servers being added.
+cluster_members_group: vse
+cluster_extend_group: new

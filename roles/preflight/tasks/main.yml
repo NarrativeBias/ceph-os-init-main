@@ -18,6 +18,8 @@
       (got '{{ environment_type | default('undefined') }}').
   run_once: true
 
+- ansible.builtin.import_tasks: production_admin.yml
+
 - name: validating required group_vars / vault variables
   ansible.builtin.assert:
     that:

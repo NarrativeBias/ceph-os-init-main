@@ -1,0 +1,5 @@
+# Fix to default by Ansible managed
+127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1 localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.0.0.11 host1.example.com host1
+10.0.0.12 host2.example.com host2

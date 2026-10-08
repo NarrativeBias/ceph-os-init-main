@@ -1,0 +1,35 @@
+---
+# Playbook 03 creates the production admin for environment_type.
+# Stop when that account already exists on any host in this play.
+# -e force=yes (any value, including an empty one) skips this check.
+
+- name: check whether the production admin account exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ production_admin_users[environment_type] }}"
+  register: production_admin_account
+  changed_when: false
+  failed_when: >-
+    production_admin_account.msg is defined
+    and 'could not be found' not in production_admin_account.msg
+  when: force is not defined
+
+- name: record hosts where the production admin exists
+  ansible.builtin.set_fact:
+    production_admin_hit: "{{ inventory_hostname }}"
+  when:
+    - force is not defined
+    - production_admin_users[environment_type] in (production_admin_account.ansible_facts.getent_passwd | default({}))
+
+- name: stop when the production admin already exists on any host in this play
+  ansible.builtin.assert:
+    that:
+      - hosts_with_production_admin | length == 0
+    fail_msg: >-
+      Production admin '{{ production_admin_users[environment_type] }}' already exists on
+      {{ hosts_with_production_admin | join(', ') }}.
+      Pass -e force=yes to ignore this check.
+  vars:
+    hosts_with_production_admin: "{{ ansible_play_hosts_all | map('extract', hostvars, 'production_admin_hit') | select('defined') | list }}"
+  when: force is not defined
+  run_once: true

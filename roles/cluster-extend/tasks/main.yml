@@ -1,0 +1,12 @@
+---
+# Tasks that run only when cluster_action=extend.
+# A task that runs for both actions and needs every cluster hostname
+# belongs in its own role and should loop over cluster_hosts.
+# Hosts in [vse] that are not in [new] are not part of this play.
+
+- name: extend-only scope is active
+  ansible.builtin.debug:
+    msg: >-
+      cluster_action=extend, preparing {{ cluster_new_hosts | length }} host(s);
+      {{ cluster_existing_hosts | length }} already in the cluster.
+  run_once: true

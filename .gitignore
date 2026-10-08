@@ -1,4 +1,8 @@
 *hosts
+!roles/etc-hosts/
+!roles/etc-hosts/**
+registry-images/*.tar.gz
+registry-images/*.tgz
 /group_vars/*yml
 uploads/*
 certs/*

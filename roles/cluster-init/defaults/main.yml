@@ -1,0 +1,11 @@
+---
+mon_ansible_dir: /etc/ansible
+mon_ansible_inventory: "{{ mon_ansible_dir }}/hosts"
+mon_ansible_cfg: "{{ mon_ansible_dir }}/ansible.cfg"
+mon_ansible_packages:
+  - ansible
+  - sshpass
+
+# *.tar.gz archives on the controller, loaded on the first mon.
+registry_images_dir: "{{ inventory_dir }}/registry-images"
+registry_images_stage: /var/lib/ceph-os-init/registry-images

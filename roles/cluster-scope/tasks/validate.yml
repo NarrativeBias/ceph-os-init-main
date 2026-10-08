@@ -1,0 +1,77 @@
+---
+- name: require cluster_action
+  ansible.builtin.assert:
+    that:
+      - cluster_action is defined
+      - cluster_action in cluster_actions
+    fail_msg: >-
+      cluster_action must be one of {{ cluster_actions | join(', ') }}
+      (got '{{ cluster_action | default('undefined') }}').
+      Pass -e cluster_action=init|extend, or set it in inventory group_vars.
+  run_once: true
+
+- name: require srv to be an inventory group
+  ansible.builtin.assert:
+    that:
+      - srv is defined
+      - srv | length > 0
+      - srv in groups
+      - groups[srv] | length > 0
+    fail_msg: >-
+      srv must be a non-empty inventory group: the hosts this run prepares.
+      Got '{{ srv | default('undefined') }}'.
+  run_once: true
+
+- name: require vse to list the cluster
+  ansible.builtin.assert:
+    that:
+      - cluster_members_group in groups
+      - groups[cluster_members_group] | length > 0
+    fail_msg: >-
+      Inventory group '{{ cluster_members_group }}' must list the servers in the cluster.
+  run_once: true
+
+- name: init prepares vse
+  ansible.builtin.assert:
+    that:
+      - srv == cluster_members_group
+    fail_msg: >-
+      cluster_action=init prepares the whole cluster.
+      Pass -e srv={{ cluster_members_group }} (got '{{ srv }}').
+  when: cluster_action == 'init'
+  run_once: true
+
+- name: init has no hosts waiting in new
+  ansible.builtin.assert:
+    that:
+      - cluster_extend_group not in groups or (groups[cluster_extend_group] | length == 0)
+    fail_msg: >-
+      cluster_action=init but group '{{ cluster_extend_group }}' lists hosts.
+      Use cluster_action=extend and -e srv={{ cluster_extend_group }}.
+  when: cluster_action == 'init'
+  run_once: true
+
+- name: extend prepares new
+  ansible.builtin.assert:
+    that:
+      - srv == cluster_extend_group
+      - cluster_extend_group in groups
+      - groups[cluster_extend_group] | length > 0
+    fail_msg: >-
+      cluster_action=extend prepares group '{{ cluster_extend_group }}'.
+      Pass -e srv={{ cluster_extend_group }}.
+      That group must list the hosts being added.
+  when: cluster_action == 'extend'
+  run_once: true
+
+- name: extend still lists members already in the cluster
+  ansible.builtin.assert:
+    that:
+      - (groups[cluster_members_group] | difference(groups[cluster_extend_group])) | length > 0
+    fail_msg: >-
+      cluster_action=extend but every host in '{{ cluster_members_group }}'
+      is also in '{{ cluster_extend_group }}'.
+      '{{ cluster_members_group }}' must still list the hosts already in the cluster.
+      This playbook does not connect to those hosts.
+  when: cluster_action == 'extend'
+  run_once: true

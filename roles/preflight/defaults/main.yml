@@ -4,6 +4,12 @@ supported_environment_types:
   - TEST
   - PROD
 
+# Local admin created by roles/production-users in playbook 03.
+production_admin_users:
+  PROD: psadm
+  TEST: tsadm
+  DEV: dsadm
+
 # Always required (group_vars / vault)
 preflight_required_vars:
   - local_registry

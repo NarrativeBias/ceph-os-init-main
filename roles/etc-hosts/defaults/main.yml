@@ -1,0 +1,4 @@
+---
+# Filled copy of etc-hosts.example, kept next to group_vars (inventory_dir).
+etc_hosts_src: "{{ inventory_dir }}/etc-hosts"
+etc_hosts_dest: /etc/hosts

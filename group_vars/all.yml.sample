@@ -1,0 +1,10 @@
+# Copy to group_vars/all.yml next to the inventory and replace the example values.
+local_registry: "d5example-mo5001lp.corp.dev.vtb:5000"
+ceph_repo_ver:
+node_exporter_ver: "1.8.2"
+# Target OS: Ubuntu 24.04 (noble)
+ubuntu_codename: noble
+
+# Archives loaded into the registry on the first mon.
+# Default is <inventory_dir>/registry-images
+# registry_images_dir:

@@ -1,0 +1,140 @@
+---
+# Local registry on the first mon. Image archives live in registry_images_dir
+# on the controller (default: <inventory_dir>/registry-images).
+
+- name: require local_registry
+  ansible.builtin.assert:
+    that:
+      - local_registry is defined
+      - local_registry is match('^[^:]+:[0-9]+$')
+    fail_msg: >-
+      local_registry must be host:port
+      (got '{{ local_registry | default('undefined') }}').
+  run_once: true
+
+- name: find image archives on the controller
+  ansible.builtin.find:
+    paths: "{{ registry_images_dir }}"
+    patterns: "*.tar.gz"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: registry_archives
+
+- name: image archive directory must contain tar.gz files
+  ansible.builtin.assert:
+    that:
+      - registry_archives.files | default([]) | length > 0
+    fail_msg: >-
+      No *.tar.gz in {{ registry_images_dir }}.
+      Put registry.tar.gz and the other image archives there
+      (see registry-images/README).
+  run_once: true
+
+- name: deploy the local registry on the first mon
+  when: inventory_hostname == groups['mons'][0]
+  block:
+    - name: install podman on the first mon
+      ansible.builtin.apt:
+        name: podman
+        state: present
+        update_cache: true
+
+    - name: create the image staging directory
+      ansible.builtin.file:
+        path: "{{ registry_images_stage }}"
+        state: directory
+        mode: "0755"
+
+    - name: copy image archives to the first mon
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ registry_images_stage }}/"
+        mode: "0644"
+      loop: "{{ registry_archives.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+
+    - name: load image archives
+      ansible.builtin.command:
+        argv:
+          - podman
+          - load
+          - -i
+          - "{{ item }}"
+      loop: "{{ registry_archives.files | map(attribute='path') | map('basename') | map('regex_replace', '^(.*)$', registry_images_stage ~ '/\\1') | list }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: list loaded images
+      ansible.builtin.command:
+        argv:
+          - podman
+          - images
+          - --format
+          - "{{ '{{.Repository}}:{{.Tag}}' }}"
+      register: loaded_images
+      changed_when: false
+
+    - name: choose the registry image and the images to publish
+      ansible.builtin.set_fact:
+        registry_container_image: "{{ loaded_images.stdout_lines | select('search', 'registry') | list | first | default('') }}"
+        images_to_publish: "{{ loaded_images.stdout_lines | reject('search', 'registry') | reject('equalto', '<none>:<none>') | list }}"
+
+    - name: registry image must have been loaded
+      ansible.builtin.assert:
+        that:
+          - registry_container_image | length > 0
+        fail_msg: >-
+          None of the loaded images is the registry.
+          Add registry.tar.gz to {{ registry_images_dir }}.
+
+    - name: install the registry systemd unit
+      ansible.builtin.template:
+        src: container-registry.service.j2
+        dest: /etc/systemd/system/container-registry.service
+        mode: "0644"
+
+    - name: allow pushes to the local registry
+      ansible.builtin.copy:
+        dest: /etc/containers/registries.conf.d/ceph.conf
+        mode: "0644"
+        content: |
+          [[registry]]
+          location = "{{ local_registry }}"
+          insecure = true
+
+    - name: start the local registry
+      ansible.builtin.systemd:
+        name: container-registry.service
+        daemon_reload: true
+        enabled: true
+        state: started
+
+    - name: wait for the local registry
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ local_registry.split(':') | last }}"
+        delay: 2
+        timeout: 60
+
+    - name: retag, push, drop both local tags, and pull back
+      ansible.builtin.shell: |
+        set -euo pipefail
+        old="{{ item }}"
+        case "$old" in
+          */*) ;;
+          *) echo "image has no registry prefix: $old" >&2; exit 1 ;;
+        esac
+        suffix="${old#*/}"
+        new="{{ local_registry }}/${suffix}"
+        podman tag "$old" "$new"
+        podman image rm "$old"
+        podman push --tls-verify=false "$new"
+        podman image rm "$new"
+        podman pull --tls-verify=false "$new"
+      args:
+        executable: /bin/bash
+      loop: "{{ images_to_publish }}"
+      loop_control:
+        label: "{{ item }}"

@@ -1,0 +1,26 @@
+---
+- name: require the filled hosts file
+  ansible.builtin.stat:
+    path: "{{ etc_hosts_src }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: etc_hosts_file
+
+- name: filled hosts file must exist
+  ansible.builtin.assert:
+    that:
+      - etc_hosts_file.stat.exists | default(false)
+      - etc_hosts_file.stat.size | default(0) > 0
+    fail_msg: >-
+      {{ etc_hosts_src }} is missing or empty.
+      Copy etc-hosts.example there and fill in one line per host: IP FQDN shortname.
+  run_once: true
+
+- name: install /etc/hosts
+  ansible.builtin.copy:
+    src: "{{ etc_hosts_src }}"
+    dest: "{{ etc_hosts_dest }}"
+    owner: root
+    group: root
+    mode: "0644"

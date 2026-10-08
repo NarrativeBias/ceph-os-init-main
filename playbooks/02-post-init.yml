@@ -1,5 +1,8 @@
 ---
 # code: language=ansible
+#
+# Reinstalls /etc/hosts from <inventory_dir>/etc-hosts after the file has been
+# replaced between playbook 01 and this one. Same source as playbook 01.
 
 - hosts: "{{ srv }}"
   gather_facts: true
@@ -9,6 +12,8 @@
   roles:
     - role: preflight
       tags: [preflight]
+    - role: etc-hosts
+      tags: [network, hosts]
     - role: reconcile-users
       tags: [users]
     - role: ntp

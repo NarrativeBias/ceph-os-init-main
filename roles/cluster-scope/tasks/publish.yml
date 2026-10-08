@@ -1,0 +1,8 @@
+---
+- name: publish cluster host lists
+  ansible.builtin.set_fact:
+    cluster_new_hosts: "{{ groups[srv] | sort }}"
+    cluster_existing_hosts: "{{ ([] if cluster_action == 'init' else (groups[cluster_members_group] | difference(extend_hosts))) | sort }}"
+    cluster_hosts: "{{ (([] if cluster_action == 'init' else (groups[cluster_members_group] | difference(extend_hosts))) | sort) + (groups[srv] | sort) }}"
+  vars:
+    extend_hosts: "{{ groups[cluster_extend_group] if cluster_extend_group in groups else [] }}"
