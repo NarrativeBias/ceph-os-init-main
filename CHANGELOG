@@ -16,6 +16,11 @@ group_vars/all.yml.sample — пример, local_registry: d5example-mo5001lp.c
 Новый кластер: на первом хосте [mons] ставятся ansible и sshpass, туда копируется
 текущий инвентарь в /etc/ansible/hosts и ansible.cfg с host_key_checking = False.
 Туда же поднимается podman registry и заливаются архивы из registry-images.
+Повторный прогон не поднимает registry заново и не заливает уже загруженные образы.
+Архивы на хосте лежат в /var/lib/containers/registry-images.
+Push идёт после роли podman, которая помечает registry insecure.
+02-post-init: HostMetadata в zabbix_agent2.conf (Ceph_Mgr для [mons]/[mon],
+Ceph_GW для [rgw]) и промпт /etc/profile.d/ps.sh из cluster_name.
 
 03.04.2026
 Добавил проверку заполнения необходимых переменных в group_vars

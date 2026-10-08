@@ -4,6 +4,7 @@ ceph_repo_ver:
 node_exporter_ver: "1.8.2"
 # Target OS: Ubuntu 24.04 (noble)
 ubuntu_codename: noble
+cluster_name: "TEST-EXAMPLE"
 
 # Archives loaded into the registry on the first mon.
 # Default is <inventory_dir>/registry-images

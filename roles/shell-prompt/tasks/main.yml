@@ -1,0 +1,16 @@
+---
+- name: require cluster_name
+  ansible.builtin.assert:
+    that:
+      - cluster_name is defined
+      - cluster_name | length > 0
+    fail_msg: >-
+      cluster_name must be set in group_vars (example: TEST-EXAMPLE).
+  run_once: true
+
+- name: install cluster prompt in /etc/profile.d/ps.sh
+  ansible.builtin.blockinfile:
+    path: "{{ shell_prompt_path }}"
+    create: true
+    mode: "0644"
+    block: "{{ lookup('template', 'ps.sh.j2') }}"

@@ -8,4 +8,4 @@ mon_ansible_packages:
 
 # *.tar.gz archives on the controller, loaded on the first mon.
 registry_images_dir: "{{ inventory_dir }}/registry-images"
-registry_images_stage: /var/lib/ceph-os-init/registry-images
+registry_images_stage: /var/lib/containers/registry-images

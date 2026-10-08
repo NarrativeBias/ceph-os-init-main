@@ -1,7 +1,8 @@
 Put the image archives for a new cluster in this directory before playbook 01.
 
-The first host in [mons] loads every *.tar.gz here into a local podman registry,
-retags it to local_registry, pushes it, removes both local tags, and pulls it back.
+The first host in [mons] copies every *.tar.gz here to
+/var/lib/containers/registry-images, loads archives that are not already
+loaded, and publishes images that are not already present in the local registry.
 
 registry.tar.gz has to be in the directory. It is the registry image and is not
 pushed. Typical companions are the ceph, grafana, haproxy, node-exporter, and

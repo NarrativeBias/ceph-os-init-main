@@ -1,0 +1,9 @@
+---
+zabbix_agent_conf: /etc/zabbix/zabbix_agent2.conf
+zabbix_host_metadata_base: USHD_CEPH_OS_Linux_Ubuntu
+# Inventories use [mons]. [mon] is accepted as well.
+zabbix_mon_groups:
+  - mons
+  - mon
+zabbix_rgw_groups:
+  - rgw

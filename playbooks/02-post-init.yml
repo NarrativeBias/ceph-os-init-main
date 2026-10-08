@@ -24,3 +24,7 @@
       tags: [packages, repos, ceph]
     - role: sssd-ldaps
       tags: [sssd, ldap, tls]
+    - role: zabbix-agent
+      tags: [zabbix]
+    - role: shell-prompt
+      tags: [prompt]

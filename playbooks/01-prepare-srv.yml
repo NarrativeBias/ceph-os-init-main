@@ -80,6 +80,8 @@
       tags: [packages]
     - role: podman
       tags: [packages, podman, ceph]
+      # Writes registries.conf.d/ceph.conf. cluster-init registry setup
+      # runs later and refuses to push until this file marks local_registry insecure.
     - role: ceph-packages
       tags: [packages, ceph]
     - role: dnsmasq

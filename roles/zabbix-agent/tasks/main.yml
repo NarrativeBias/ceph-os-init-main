@@ -1,0 +1,32 @@
+---
+- name: require zabbix_agent2.conf
+  ansible.builtin.stat:
+    path: "{{ zabbix_agent_conf }}"
+  register: zabbix_agent_conf_stat
+
+- name: zabbix_agent2.conf must exist on every host
+  ansible.builtin.assert:
+    that:
+      - zabbix_agent_conf_stat.stat.exists
+    fail_msg: "{{ zabbix_agent_conf }} is missing on {{ inventory_hostname }}."
+
+- name: set base HostMetadata
+  ansible.builtin.set_fact:
+    zabbix_host_metadata: "{{ zabbix_host_metadata_base }}"
+
+- name: add Ceph_Mgr for monitor hosts
+  ansible.builtin.set_fact:
+    zabbix_host_metadata: "{{ zabbix_host_metadata }}, Ceph_Mgr"
+  when: zabbix_mon_groups | intersect(group_names) | length > 0
+
+- name: add Ceph_GW for rgw hosts
+  ansible.builtin.set_fact:
+    zabbix_host_metadata: "{{ zabbix_host_metadata }}, Ceph_GW"
+  when: zabbix_rgw_groups | intersect(group_names) | length > 0
+
+- name: set HostMetadata
+  ansible.builtin.lineinfile:
+    path: "{{ zabbix_agent_conf }}"
+    regexp: '^#?\s*HostMetadata\s*='
+    line: "HostMetadata = {{ zabbix_host_metadata }}"
+  notify: restart zabbix-agent2
