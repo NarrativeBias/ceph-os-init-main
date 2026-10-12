@@ -21,6 +21,7 @@ group_vars/all.yml.sample — пример, local_registry: d5example-mo5001lp.c
 Push идёт после роли podman, которая помечает registry insecure.
 02-post-init: HostMetadata в zabbix_agent2.conf (Ceph_Mgr для [mons]/[mon],
 Ceph_GW для [rgw]) и промпт /etc/profile.d/ps.sh из cluster_name.
+SSSD: ad_use_ldaps вместо StartTLS. ldap_uri не задаётся, список КД берётся из DNS.
 
 03.04.2026
 Добавил проверку заполнения необходимых переменных в group_vars

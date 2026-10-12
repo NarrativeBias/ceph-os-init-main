@@ -10,6 +10,8 @@ sssd_tls_domains:
 
 sssd_ca_certificates_dir: /usr/local/share/ca-certificates
 sssd_conf_path: /etc/sssd/sssd.conf
-sssd_ldap_id_use_start_tls: true
+# LDAPS on 636 via DNS SRV for the domain. Do not set ldap_uri: that pins
+# servers and stops SSSD from refreshing the DC list and failing over.
+sssd_ad_use_ldaps: true
 # Repo-root secrets/certs when inventory lives at repo root (see ansible layout)
 sssd_certs_base: "{{ inventory_dir }}/secrets/certs"

@@ -76,13 +76,13 @@
   changed_when: false
   failed_when: sssd_domain_section.rc != 0
 
-- name: enable ldap_id_use_start_tls in domain section
+- name: enable ad_use_ldaps in domain section
   ansible.builtin.lineinfile:
     path: "{{ sssd_conf_path }}"
-    regexp: '^ldap_id_use_start_tls\s*='
-    line: "ldap_id_use_start_tls = {{ sssd_ldap_id_use_start_tls | bool | ternary('True', 'False') }}"
+    regexp: '^ad_use_ldaps\s*='
+    line: "ad_use_ldaps = {{ sssd_ad_use_ldaps | bool | ternary('True', 'False') }}"
     insertafter: "^\\[domain/{{ sssd_cert_domain }}\\]"
-  register: sssd_conf_tls
+  register: sssd_conf_ldaps
 
 - name: ensure sssd.conf permissions
   ansible.builtin.file:
@@ -96,4 +96,4 @@
     name: sssd
     state: restarted
     enabled: true
-  when: sssd_ca_copy is changed or sssd_conf_tls is changed
+  when: sssd_ca_copy is changed or sssd_conf_starttls is changed or sssd_conf_ldaps is changed

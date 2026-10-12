@@ -1,7 +1,7 @@
 ---
 # code: language=ansible
 #
-# Enable SSSD StartTLS + install domain CA certs on already-deployed hosts.
+# Enable SSSD LDAPS (ad_use_ldaps) + install domain CA certs on already-deployed hosts.
 # Does not run the rest of 02-post-init (users, ntp, ceph-cluster-info, etc.).
 #
 # Prerequisites:
