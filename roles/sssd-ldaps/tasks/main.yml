@@ -54,10 +54,12 @@
   loop_control:
     label: "{{ item.path | basename }}"
   register: sssd_ca_copy
+  notify: restart sssd
 
 - name: update system CA certificates
-  ansible.builtin.command: update-ca-certificates
-  when: sssd_ca_copy is changed
+  ansible.builtin.command:
+    cmd: update-ca-certificates
+  when: sssd_ca_copy.changed | default(false)
 
 - name: ensure sssd.conf exists
   ansible.builtin.stat:
@@ -70,11 +72,17 @@
       - sssd_conf_stat.stat.exists
     fail_msg: "{{ sssd_conf_path }} is missing; join AD / create sssd.conf before enabling TLS."
 
+- name: read sssd.conf
+  ansible.builtin.slurp:
+    src: "{{ sssd_conf_path }}"
+  register: sssd_conf_raw
+
 - name: require domain section in sssd.conf
-  ansible.builtin.command: "grep -F '[domain/{{ sssd_cert_domain }}]' {{ sssd_conf_path }}"
-  register: sssd_domain_section
-  changed_when: false
-  failed_when: sssd_domain_section.rc != 0
+  ansible.builtin.assert:
+    that:
+      - ("[domain/" ~ sssd_cert_domain ~ "]") in (sssd_conf_raw.content | b64decode)
+    fail_msg: >-
+      Section [domain/{{ sssd_cert_domain }}] not found in {{ sssd_conf_path }}.
 
 - name: enable ad_use_ldaps in domain section
   ansible.builtin.lineinfile:
@@ -82,7 +90,7 @@
     regexp: '^ad_use_ldaps\s*='
     line: "ad_use_ldaps = {{ sssd_ad_use_ldaps | bool | ternary('True', 'False') }}"
     insertafter: "^\\[domain/{{ sssd_cert_domain }}\\]"
-  register: sssd_conf_ldaps
+  notify: restart sssd
 
 - name: ensure sssd.conf permissions
   ansible.builtin.file:
@@ -90,10 +98,3 @@
     owner: root
     group: root
     mode: "0600"
-
-- name: restart sssd
-  ansible.builtin.systemd:
-    name: sssd
-    state: restarted
-    enabled: true
-  when: sssd_ca_copy is changed or sssd_conf_starttls is changed or sssd_conf_ldaps is changed

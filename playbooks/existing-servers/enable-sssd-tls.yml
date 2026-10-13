@@ -5,13 +5,15 @@
 # Does not run the rest of 02-post-init (users, ntp, ceph-cluster-info, etc.).
 #
 # Prerequisites:
-#   - inventory at repo root (so group_vars + secrets/certs resolve)
-#   - seg_fqdn set for the target group
-#   - secrets/certs/<domain>/*.crt present on the controller
+#   - seg_fqdn set in inventory group_vars
+#   - certs in THIS repo: secrets/certs/<domain>/*.crt (shared; not per-inventory)
+#     Prefer plaintext PEM (CA certs are public). If vault-encrypted, pass
+#     --ask-vault-pass with the same password used to encrypt those files.
 #   - hosts already domain-joined with /etc/sssd/sssd.conf
 #
 # Usage:
 #   ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -e srv=<group>
+#   ansible-playbook ... --ask-vault-pass   # only if certs are vault-encrypted
 
 - hosts: "{{ srv }}"
   gather_facts: true

@@ -13,5 +13,7 @@ sssd_conf_path: /etc/sssd/sssd.conf
 # LDAPS on 636 via DNS SRV for the domain. Do not set ldap_uri: that pins
 # servers and stops SSSD from refreshing the DC list and failing over.
 sssd_ad_use_ldaps: true
-# Repo-root secrets/certs when inventory lives at repo root (see ansible layout)
-sssd_certs_base: "{{ inventory_dir }}/secrets/certs"
+# Always the playbook repo (next to roles/), NOT the inventory tree.
+# So many inventories can share one cert store:
+#   <ceph-os-init>/secrets/certs/<domain>/*.crt
+sssd_certs_base: "{{ role_path }}/../../secrets/certs"
