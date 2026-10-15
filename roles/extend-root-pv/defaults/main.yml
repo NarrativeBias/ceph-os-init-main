@@ -2,5 +2,7 @@
 extend_root_pv_disk: /dev/sda
 extend_root_pv_part: /dev/sda3
 extend_root_pv_partnum: 3
-# Skip resizepart when free space after the partition is at or below this (bytes).
-extend_root_pv_min_free_bytes: 1048576
+# Ignore leftover GPT/alignment/PE slack below this (bytes). Typical PV
+# extent is 4MiB, so a sub-PE gap after a full grow is normal and not a
+# reason to run parted/pvresize again.
+extend_root_pv_min_free_bytes: 16777216

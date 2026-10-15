@@ -1,5 +1,7 @@
 ---
-# Grow sda3 + PV only when there is real free space left on the disk / PV.
+# Grow sda3 + PV only when there is meaningful free space left.
+# ansible.builtin.command reports changed whenever it runs — so we must
+# not call parted/pvresize for GPT/PE slack that cannot be used.
 
 - name: measure free space after {{ extend_root_pv_disk }} partition {{ extend_root_pv_partnum }}
   ansible.builtin.shell: |
@@ -40,7 +42,6 @@
 - name: measure PV vs device size for {{ extend_root_pv_part }}
   ansible.builtin.shell: |
     set -euo pipefail
-    # pv_size,dev_size in bytes (no unit suffix)
     pvs --noheadings --nosuffix --units b -o pv_size,dev_size \
       --separator=',' "{{ extend_root_pv_part }}" \
       | tr -d ' ' | awk -F, '{print $1" "$2}'
@@ -59,3 +60,7 @@
   when:
     - _pv | length == 2
     - (_pv[1] - _pv[0]) > (extend_root_pv_min_free_bytes | int)
+  register: extend_root_pv_resize
+  changed_when: >-
+    'changed' in (extend_root_pv_resize.stdout | default('') | lower)
+    or 'resized' in (extend_root_pv_resize.stdout | default('') | lower)

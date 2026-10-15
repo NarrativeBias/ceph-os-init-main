@@ -6,6 +6,11 @@
 # Push and pull use the insecure setting written by the podman role in
 # /etc/containers/registries.conf.d/ceph.conf. This file is imported from
 # cluster-init, which playbook 02-prepare-ceph runs after that role.
+#
+# Idempotency:
+#   - load:  <archive>.sha256 stamp skips podman load when archive unchanged
+#   - publish: <stage>/<image>.published stamp + local/registry presence
+#     skips retag/push/pull when the image is already published
 
 - name: require local_registry
   ansible.builtin.assert:
@@ -46,6 +51,7 @@
         name: podman
         state: present
         update_cache: true
+        cache_valid_time: 3600
 
     - name: require the podman role insecure registry config
       ansible.builtin.stat:
@@ -184,24 +190,56 @@
         esac
         suffix="${old#*/}"
         new="{{ local_registry }}/${suffix}"
+        port="{{ local_registry.split(':') | last }}"
+        # Stable stamp path for this published image (slashes → underscores).
+        stamp="{{ registry_images_stage }}/published.$(printf '%s' "$new" | tr '/:' '__')"
+
+        registry_has_manifest() {
+          local repo tag
+          repo="${suffix%:*}"
+          tag="${suffix##*:}"
+          curl -sf -o /dev/null \
+            -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+            "http://127.0.0.1:${port}/v2/${repo}/manifests/${tag}"
+        }
+
         if [ "$old" = "$new" ]; then
-          echo "already local $old"
+          if [ -f "$stamp" ] && registry_has_manifest; then
+            echo "PUBLISH_OK $new"
+            exit 0
+          fi
+          if registry_has_manifest; then
+            printf '%s\n' "$new" > "$stamp"
+            echo "PUBLISH_OK $new"
+            exit 0
+          fi
+        fi
+
+        if [ "$fresh" != "yes" ] && [ -f "$stamp" ] && registry_has_manifest; then
+          podman image rm "$old" 2>/dev/null || true
+          echo "PUBLISH_OK $new"
           exit 0
         fi
-        if [ "$fresh" != "yes" ] && podman image exists "$new"; then
-          podman image rm "$old" || true
-          echo "already present $new"
+
+        if [ "$fresh" != "yes" ] && podman image exists "$new" && registry_has_manifest; then
+          podman image rm "$old" 2>/dev/null || true
+          printf '%s\n' "$new" > "$stamp"
+          echo "PUBLISH_OK $new"
           exit 0
         fi
-        podman tag "$old" "$new"
-        podman image rm "$old"
+
+        if [ "$old" != "$new" ]; then
+          podman tag "$old" "$new"
+          podman image rm "$old"
+        fi
         podman push --tls-verify=false "$new"
         podman image rm "$new"
         podman pull --tls-verify=false "$new"
-        echo "published $new"
+        printf '%s\n' "$new" > "$stamp"
+        echo "PUBLISH_CHANGED $new"
       args:
         executable: /bin/bash
       loop: "{{ images_to_publish }}"
       loop_control:
         label: "{{ item }}"
-      changed_when: "'already ' not in (stdout | default(''))"
+      changed_when: "'PUBLISH_CHANGED' in (stdout | default(''))"

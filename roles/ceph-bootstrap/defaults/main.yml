@@ -5,5 +5,8 @@ ceph_bootstrap_mon_iface: bond0
 ceph_bootstrap_config_remote: /var/tmp/ceph.conf.bootstrap
 # Image for cephadm bootstrap (from registry; hosts pull in playbook 03).
 ceph_bootstrap_image: "{{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}"
-# Skip bootstrap if /etc/ceph/ceph.conf already exists.
+# Skip bootstrap when any of these already look like a live/partial cluster.
 ceph_bootstrap_skip_if_configured: true
+ceph_bootstrap_conf_path: /etc/ceph/ceph.conf
+ceph_bootstrap_keyring_path: /etc/ceph/ceph.client.admin.keyring
+ceph_bootstrap_lib_dir: /var/lib/ceph

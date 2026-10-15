@@ -1,6 +1,8 @@
 ---
 # Runs cephadm bootstrap on the first host in [mons] (inventory order). Init only.
 # cephorch authorized_keys are installed later by playbook 03 (prepare-ceph-node).
+# Never invoke bootstrap if an existing or partial cluster is detected — a failed
+# cephadm bootstrap can delete cluster files under /var/lib/ceph.
 
 - name: require mons group for bootstrap
   ansible.builtin.assert:
@@ -24,25 +26,38 @@
       (got '{{ cluster_network | default('undefined') }}').
   run_once: true
 
-- name: check whether ceph is already configured on first mon
-  ansible.builtin.stat:
-    path: /etc/ceph/ceph.conf
-  register: ceph_conf_stat
-  when: inventory_hostname == groups['mons'][0]
+- name: detect existing Ceph cluster
+  ansible.builtin.import_role:
+    name: ceph-cluster-detect
+  when: ceph_cluster_already_present is not defined
 
 - name: mark bootstrap needed on first mon
   ansible.builtin.set_fact:
     ceph_bootstrap_needed: true
   when:
     - inventory_hostname == groups['mons'][0]
-    - >-
-      not (ceph_bootstrap_skip_if_configured | bool)
-      or not (ceph_conf_stat.stat.exists | default(false))
+    - not (ceph_bootstrap_skip_if_configured | bool)
+      or not (ceph_cluster_already_present | bool)
 
 - name: mark bootstrap not needed elsewhere
   ansible.builtin.set_fact:
     ceph_bootstrap_needed: false
   when: ceph_bootstrap_needed is not defined
+
+- name: refuse forced bootstrap over an existing cluster
+  ansible.builtin.assert:
+    that:
+      - not (ceph_cluster_already_present | default(false) | bool)
+    fail_msg: >-
+      Refusing cephadm bootstrap: cluster already present on
+      {{ groups['mons'][0] }} (ceph.conf, admin keyring, and/or
+      {{ ceph_bootstrap_lib_dir }}/<fsid>). Set
+      ceph_bootstrap_skip_if_configured=true (default) to skip, or remove
+      the existing cluster deliberately before re-bootstrapping.
+  when:
+    - inventory_hostname == groups['mons'][0]
+    - ceph_bootstrap_needed | bool
+    - not (ceph_bootstrap_skip_if_configured | bool)
 
 - name: resolve mon IP from {{ ceph_bootstrap_mon_iface }}
   ansible.builtin.shell: |

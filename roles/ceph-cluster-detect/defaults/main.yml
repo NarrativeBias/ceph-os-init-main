@@ -1,0 +1,4 @@
+---
+ceph_bootstrap_conf_path: /etc/ceph/ceph.conf
+ceph_bootstrap_keyring_path: /etc/ceph/ceph.client.admin.keyring
+ceph_bootstrap_lib_dir: /var/lib/ceph

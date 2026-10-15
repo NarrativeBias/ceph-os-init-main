@@ -37,6 +37,7 @@
     name: "{{ mon_ansible_packages }}"
     state: present
     update_cache: true
+    cache_valid_time: 3600
   when:
     - inventory_hostname == groups['mons'][0]
     - mon_ansible_packages | length > 0

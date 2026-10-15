@@ -1,0 +1,44 @@
+---
+# Sets ceph_cluster_already_present on every play host (from first mon).
+# Used by cluster-init / ceph-bootstrap to skip destructive or noisy init work.
+
+- name: require mons group for cluster detect
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+    fail_msg: Inventory group 'mons' is required to detect an existing cluster.
+  run_once: true
+
+- name: check for existing ceph.conf on first mon
+  ansible.builtin.stat:
+    path: "{{ ceph_bootstrap_conf_path }}"
+  register: ceph_detect_conf_stat
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+
+- name: check for existing admin keyring on first mon
+  ansible.builtin.stat:
+    path: "{{ ceph_bootstrap_keyring_path }}"
+  register: ceph_detect_keyring_stat
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+
+- name: list cephadm fsid directories on first mon
+  ansible.builtin.find:
+    paths: "{{ ceph_bootstrap_lib_dir }}"
+    file_type: directory
+    depth: 1
+    patterns: "????????-????-????-????-????????????"
+  register: ceph_detect_fsid_dirs
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+
+- name: publish ceph_cluster_already_present
+  ansible.builtin.set_fact:
+    ceph_cluster_already_present: >-
+      {{
+        (ceph_detect_conf_stat.stat.exists | default(false))
+        or (ceph_detect_keyring_stat.stat.exists | default(false))
+        or ((ceph_detect_fsid_dirs.files | default([])) | length > 0)
+      }}
