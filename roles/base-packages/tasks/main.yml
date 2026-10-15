@@ -2,6 +2,8 @@
 - name: apt-get update
   ansible.builtin.apt:
     update_cache: true
+    # Skip when lists were refreshed recently (re-runs stay clean).
+    cache_valid_time: 3600
 
 - name: install pkgs for UNIX
   ansible.builtin.apt:

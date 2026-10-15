@@ -1,0 +1,6 @@
+---
+extend_root_pv_disk: /dev/sda
+extend_root_pv_part: /dev/sda3
+extend_root_pv_partnum: 3
+# Skip resizepart when free space after the partition is at or below this (bytes).
+extend_root_pv_min_free_bytes: 1048576

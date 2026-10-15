@@ -34,6 +34,7 @@
     group: root
     content: |
       GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX apparmor=0"
+  notify: update grub
 
 - name: apply grub kernel cmdline drops
   ansible.builtin.copy:
@@ -46,11 +47,7 @@
       GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} processor.max_cstate=1 intel_idle.max_cstate=0 idle=halt cpuidle.off=1"
       GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} transparent_hugepage=madvise"
       GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} cpufreq.default_governor=performance"
-
-- name: update grub
-  ansible.builtin.command:
-    cmd: update-grub2
-  changed_when: true
+  notify: update grub
 
 - name: disable systemd pager via pam_env
   ansible.builtin.lineinfile:

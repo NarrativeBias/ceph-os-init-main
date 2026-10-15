@@ -1,20 +1,15 @@
-- name: "Configure chrony.conf"
-  template:
+---
+- name: configure chrony.conf
+  ansible.builtin.template:
     src: chrony.conf.j2
-    dest: "/etc/chrony/chrony.conf"
+    dest: /etc/chrony/chrony.conf
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
+  notify: restart chrony
 
-- name: "Enabling chrony service"
-  systemd:
+- name: enable and start chrony
+  ansible.builtin.systemd:
     name: chrony
-    enabled: yes
-
-- name: "Restarting chrony service"
-  systemd:
-    name: chrony
-    state: restarted
-    daemon_reload: yes
-  when:
-    - not ansible_check_mode
+    state: started
+    enabled: true

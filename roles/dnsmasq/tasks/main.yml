@@ -14,6 +14,7 @@
     regexp: '^#?IGNORE_RESOLVCONF='
     line: IGNORE_RESOLVCONF=yes
     create: true
+  notify: restart dnsmasq
 
 - name: configure dnsmasq
   ansible.builtin.template:
@@ -22,6 +23,7 @@
     mode: "0644"
     owner: root
     group: root
+  notify: restart dnsmasq
 
 - name: create resolv.dnsmasq with upstream DNS
   ansible.builtin.copy:
@@ -31,6 +33,7 @@
     group: root
     content: |
       nameserver {{ dns_ip }}
+  notify: restart dnsmasq
 
 - name: check if resolv.conf is a symlink
   ansible.builtin.stat:
@@ -54,6 +57,5 @@
 - name: enable and start dnsmasq
   ansible.builtin.systemd:
     name: dnsmasq
-    state: restarted
+    state: started
     enabled: true
-    daemon_reload: true

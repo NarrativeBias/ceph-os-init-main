@@ -1,46 +1,51 @@
-- set_fact:
-      ubuntu_channels:
-        - "/ {{ ubuntu_codename }} main restricted universe multiverse"
-        - "/ {{ ubuntu_codename }}-updates main restricted universe multiverse"
-        - "/ {{ ubuntu_codename }}-security main restricted universe multiverse"
-      ubuntu_path: '/etc/apt/sources.list.d/'
+---
+- name: build ubuntu channel list
+  ansible.builtin.set_fact:
+    ubuntu_channels:
+      - "/ {{ ubuntu_codename }} main restricted universe multiverse"
+      - "/ {{ ubuntu_codename }}-updates main restricted universe multiverse"
+      - "/ {{ ubuntu_codename }}-security main restricted universe multiverse"
+    ubuntu_path: /etc/apt/sources.list.d/
+    apt_repos_managed_prefix: "ubuntu-"
 
-- find:
+- name: find existing apt source files
+  ansible.builtin.find:
     paths: "{{ ubuntu_path }}"
     patterns:
       - "*.list"
       - "*.sources"
-  register: file_match
-
-- set_fact:
-    filepath: "{{ file_match.files | map(attribute='path') | list }}"
+  register: apt_repos_found
 
 - name: configure ubuntu auto-upgrades
-  copy:
+  ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/20auto-upgrades
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     content: |
       APT::Periodic::Update-Package-Lists "0";
       APT::Periodic::Unattended-Upgrade "0";
 
-- name: "Remove default repos"
-  file:
+- name: remove foreign apt source files
+  ansible.builtin.file:
     path: "{{ item }}"
     state: absent
-  loop: "{{ filepath }}"
+  loop: "{{ apt_repos_found.files | map(attribute='path') | list }}"
+  when: >-
+    (item | basename) is not match('^' ~ apt_repos_managed_prefix)
+  loop_control:
+    label: "{{ item }}"
 
-- name: remove sources.list
-  file:
+- name: remove classic sources.list
+  ansible.builtin.file:
     path: /etc/apt/sources.list
     state: absent
 
-- name: "Create ubuntu repo file"
-  template:
+- name: create ubuntu repo files
+  ansible.builtin.template:
     src: ubuntu-repo-template.j2
     dest: "/etc/apt/sources.list.d/ubuntu-{{ item.split(' ')[1] }}.list"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   loop: "{{ ubuntu_channels }}"

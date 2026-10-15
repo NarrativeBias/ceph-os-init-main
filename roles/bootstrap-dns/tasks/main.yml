@@ -1,9 +1,25 @@
-- name: Temporary resolv.conf
-  copy:
+---
+# Early DNS so apt/hostname work before dnsmasq is installed.
+# Skip when resolv already points at local dnsmasq (re-runs).
+
+- name: check whether OS already uses local dnsmasq
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -E
+      - '^nameserver[[:space:]]+127\.0\.0\.1([[:space:]]|$)'
+      - /etc/resolv.conf
+  register: bootstrap_dns_local
+  changed_when: false
+  failed_when: false
+
+- name: temporary resolv.conf for bootstrap
+  ansible.builtin.copy:
     dest: /etc/resolv.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     content: |
       nameserver {{ dns_ip }}
       search {{ seg_fqdn }}
+  when: bootstrap_dns_local.rc != 0

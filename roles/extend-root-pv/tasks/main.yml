@@ -1,9 +1,61 @@
-- name: resize partition /dev/sda3
-  command: parted -s /dev/sda resizepart 3 100%
-  register: resize_result
+---
+# Grow sda3 + PV only when there is real free space left on the disk / PV.
 
-- name: inform kernel of partiton table changes
-  command: partprobe /dev/sda
+- name: measure free space after {{ extend_root_pv_disk }} partition {{ extend_root_pv_partnum }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    disk_end=$(parted -s {{ extend_root_pv_disk }} unit B print \
+      | awk '/^Disk \/dev\// {print $3; exit}' | tr -d 'B')
+    part_end=$(parted -s {{ extend_root_pv_disk }} unit B print \
+      | awk -v n="{{ extend_root_pv_partnum }}" '$1 == n {print $3; exit}' | tr -d 'B')
+    if [[ -z "${disk_end}" || -z "${part_end}" ]]; then
+      echo "could not parse parted output for {{ extend_root_pv_disk }}" >&2
+      exit 1
+    fi
+    echo $((disk_end - part_end))
+  args:
+    executable: /bin/bash
+  register: extend_root_pv_gap
+  changed_when: false
 
-- name: resize pv  /dev/sda3
-  command: pvresize /dev/sda3
+- name: resize partition {{ extend_root_pv_part }} to 100%
+  ansible.builtin.command:
+    argv:
+      - parted
+      - -s
+      - "{{ extend_root_pv_disk }}"
+      - resizepart
+      - "{{ extend_root_pv_partnum | string }}"
+      - 100%
+  when: (extend_root_pv_gap.stdout | trim | int) > (extend_root_pv_min_free_bytes | int)
+  register: extend_root_pv_parted
+
+- name: inform kernel of partition table changes
+  ansible.builtin.command:
+    argv:
+      - partprobe
+      - "{{ extend_root_pv_disk }}"
+  when: extend_root_pv_parted is changed
+
+- name: measure PV vs device size for {{ extend_root_pv_part }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    # pv_size,dev_size in bytes (no unit suffix)
+    pvs --noheadings --nosuffix --units b -o pv_size,dev_size \
+      --separator=',' "{{ extend_root_pv_part }}" \
+      | tr -d ' ' | awk -F, '{print $1" "$2}'
+  args:
+    executable: /bin/bash
+  register: extend_root_pv_sizes
+  changed_when: false
+
+- name: resize PV {{ extend_root_pv_part }}
+  ansible.builtin.command:
+    argv:
+      - pvresize
+      - "{{ extend_root_pv_part }}"
+  vars:
+    _pv: "{{ extend_root_pv_sizes.stdout | trim | split | map('int') | list }}"
+  when:
+    - _pv | length == 2
+    - (_pv[1] - _pv[0]) > (extend_root_pv_min_free_bytes | int)
