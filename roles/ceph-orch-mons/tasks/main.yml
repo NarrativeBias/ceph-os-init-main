@@ -64,3 +64,19 @@
     ceph_orch_wait_services: "{{ ceph_orch_mons_wait_services }}"
     ceph_orch_wait_retries: "{{ ceph_orch_mons_wait_retries }}"
     ceph_orch_wait_delay: "{{ ceph_orch_mons_wait_delay }}"
+
+# Restart only once multiple mgrs are up (unsafe with a single bootstrap mgr).
+- name: restart mgr via orch
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - restart
+      - mgr
+  when:
+    - inventory_hostname == groups['mons'][0]
+    - (groups['mons'] | length) > 1
+  changed_when: true

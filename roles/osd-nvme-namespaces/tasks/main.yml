@@ -1,6 +1,7 @@
 ---
-# Non-interactive replacement for the old 2_namespaces.sh playbook.
-# Only touches controllers that still lack n2..n9 (already-split are skipped).
+# Split empty NVMe controllers into two namespaces.
+# Already-split (no LVM): fail unless osd_nvme_allow_already_split.
+# Already-split with LVM: always fail.
 
 - name: stage NVMe model → namespace size dictionary
   ansible.builtin.copy:
@@ -21,10 +22,9 @@
       - /var/tmp/osd-nvme-namespace-sizes.json
   environment:
     OSD_NVME_CTRL_GLOB: "{{ osd_nvme_ctrl_glob }}"
+    OSD_NVME_ALLOW_ALREADY_SPLIT: "{{ osd_nvme_allow_already_split | bool | ternary('1', '0') }}"
   register: osd_nvme_split
-  changed_when: >-
-    'Split NVMe controllers:' in (osd_nvme_split.stdout | default(''))
-    and 'nothing to do' not in (osd_nvme_split.stdout | default(''))
+  changed_when: "'Split NVMe controllers:' in (osd_nvme_split.stdout | default(''))"
 
 - name: remove staged NVMe split files
   ansible.builtin.file:

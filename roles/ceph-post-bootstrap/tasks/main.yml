@@ -123,7 +123,7 @@
       - --
       - ceph
       - balancer
-      - off
+      - "off"  # bare off is YAML bool false
   when: inventory_hostname == groups['mons'][0]
   changed_when: true
 
@@ -135,7 +135,7 @@
       - --
       - ceph
       - progress
-      - off
+      - "off"
   when: inventory_hostname == groups['mons'][0]
   changed_when: true
 
@@ -178,16 +178,3 @@
     - "'already disabled' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
     - "'No module named' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
     - "'not found' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
-
-- name: restart mgr via orch
-  ansible.builtin.command:
-    argv:
-      - cephadm
-      - shell
-      - --
-      - ceph
-      - orch
-      - restart
-      - mgr
-  when: inventory_hostname == groups['mons'][0]
-  changed_when: true

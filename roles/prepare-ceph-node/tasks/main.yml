@@ -1,7 +1,7 @@
 ---
 - name: pull ceph base container
   ansible.builtin.command:
-    cmd: "podman pull {{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}"
+    cmd: "podman pull {{ local_registry }}/ceph/ceph:v{{ ceph_repo_ver }}"
 
 - name: pull ceph-node-exporter container
   ansible.builtin.command:

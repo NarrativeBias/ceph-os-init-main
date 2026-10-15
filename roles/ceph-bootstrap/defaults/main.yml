@@ -3,8 +3,9 @@ ceph_bootstrap_ssh_user: cephorch
 # Interface used to derive --mon-ip for cephadm bootstrap.
 ceph_bootstrap_mon_iface: bond0
 ceph_bootstrap_config_remote: /var/tmp/ceph.conf.bootstrap
-# Image for cephadm bootstrap (from registry; hosts pull in playbook 03).
-ceph_bootstrap_image: "{{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}"
+# Image for cephadm bootstrap (must match what registry publish produced).
+# Archives typically load as ceph/ceph — not ubuntu/ceph.
+ceph_bootstrap_image: "{{ local_registry }}/ceph/ceph:v{{ ceph_repo_ver }}"
 # Skip bootstrap when any of these already look like a live/partial cluster.
 ceph_bootstrap_skip_if_configured: true
 ceph_bootstrap_conf_path: /etc/ceph/ceph.conf
