@@ -1,0 +1,74 @@
+---
+# code: language=ansible
+#
+# Ceph/cluster preparation after OS prep (01-prepare-srv). Sets up Ceph
+# users and packages, podman + local registry (init), and pulls node images.
+#
+#   [vse]   servers in the cluster
+#   [new]   servers being added, usually a new rack. Omit this group otherwise.
+# Role groups (mons, osds, s3_services, rack groups, ...) stay as they are.
+# Hosts in [new] may also be listed in [vse], the same way [osds] is.
+#
+#   -e srv=vse -e cluster_action=init
+#       New cluster. [new] is absent or empty.
+#   -e srv=new -e cluster_action=extend
+#       Prepare only [new]. Hosts in [vse] but not in [new] are already in
+#       the cluster; this play does not connect to them.
+#
+# roles/cluster-scope publishes:
+#   cluster_new_hosts        hosts this run prepares
+#   cluster_existing_hosts   already in the cluster (empty on init)
+#   cluster_hosts            existing members, then the hosts being prepared
+# Use cluster_hosts for a task that runs in both actions and needs every
+# cluster hostname. Tasks that belong to only one action go in
+# roles/cluster-init or roles/cluster-extend.
+#
+#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=vse -e cluster_action=init
+#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=new -e cluster_action=extend
+#
+# A new cluster loads roles/cluster-init/files/*.tar.gz into a podman
+# registry on the first host in [mons], then prepare-ceph-node pulls images.
+
+- name: Check how this Ceph prepare run is scoped
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tags: [preflight, cluster-scope]
+  tasks:
+    - name: validate cluster scope
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: validate.yml
+
+- name: Prepare Ceph on hosts that are not in the cluster yet
+  hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../secrets/vault.yml
+  pre_tasks:
+    - name: publish cluster host lists
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: publish.yml
+      tags: [preflight, cluster-scope]
+  roles:
+    - role: preflight
+      tags: [preflight]
+    - role: ceph-service-users
+      tags: [users, ceph]
+    - role: podman
+      tags: [packages, podman, ceph]
+      # Writes registries.conf.d/ceph.conf. cluster-init registry setup
+      # runs later and refuses to push until this file marks local_registry insecure.
+    - role: ceph-packages
+      tags: [packages, ceph]
+    - role: cluster-init
+      tags: [init, ceph]
+      when: cluster_action == 'init'
+    - role: cluster-extend
+      tags: [extend, ceph]
+      when: cluster_action == 'extend'
+    - role: prepare-ceph-node
+      tags: [ceph, images]

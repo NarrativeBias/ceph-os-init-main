@@ -1,5 +1,10 @@
 ---
 # code: language=ansible
+#
+# Final playbook before host preparation is considered done.
+# Run after the PNR checklist is completed.
+#
+#   ansible-playbook playbooks/04-finish-pnr.yml -i <inventory> -e srv=vse
 
 - hosts: "{{ srv }}"
   gather_facts: true

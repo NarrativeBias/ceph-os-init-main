@@ -1,17 +1,16 @@
+---
 - name: apt-get update
-  apt:
-    update_cache: yes
+  ansible.builtin.apt:
+    update_cache: true
 
 - name: install pkgs for UNIX
-  apt:
-    pkg:
+  ansible.builtin.apt:
+    name:
       - sysstat
       - dnsutils
       - chrony
       - wget
       - curl
-      - python3-apt
-      - python-apt-common
       - net-tools
       - ifenslave
       - rsyslog
@@ -21,7 +20,20 @@
       - lldpd
       - jq
       - ethtool
+    state: present
+
+- name: remove unused packages
+  ansible.builtin.apt:
+    name:
+      - snapd
+      - cloud-init
+      - aide
+      - ufw
+      - cloud-guest-utils
+    state: absent
+    purge: true
+    autoremove: true
 
 - name: apt-get upgrade
-  apt:
-    upgrade: yes
+  ansible.builtin.apt:
+    upgrade: true

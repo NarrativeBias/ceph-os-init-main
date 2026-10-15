@@ -6,6 +6,6 @@ mon_ansible_packages:
   - ansible
   - sshpass
 
-# *.tar.gz archives on the controller, loaded on the first mon.
-registry_images_dir: "{{ inventory_dir }}/registry-images"
+# *.tar.gz archives on the controller (roles/cluster-init/files/), loaded on the first mon.
+registry_images_dir: "{{ role_path }}/files"
 registry_images_stage: /var/lib/containers/registry-images

@@ -4,9 +4,10 @@
     path: /etc/skel/.bashrc
     marker: "# {mark} ANSIBLE MANAGED BLOCK - INITIAL USERS"
     block: |
+      export HISTSIZE=50
+      export HISTFILESIZE=50
+      export HISTCONTROL=ignoreboth
       export HISTTIMEFORMAT='%F %T '
-      export HISTSIZE=10000
-      export HISTCONTROL=ignorespace
       if [ -r /etc/profile.d/ps.sh ]; then
         . /etc/profile.d/ps.sh
       fi

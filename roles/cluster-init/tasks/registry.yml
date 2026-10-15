@@ -1,11 +1,11 @@
 ---
 # Local registry on the first mon. Image archives live in registry_images_dir
-# on the controller (default: <inventory_dir>/registry-images) and are staged
+# on the controller (default: roles/cluster-init/files/) and are staged
 # on the mon under /var/lib/containers/registry-images.
 #
 # Push and pull use the insecure setting written by the podman role in
 # /etc/containers/registries.conf.d/ceph.conf. This file is imported from
-# cluster-init, which playbook 01 runs after that role.
+# cluster-init, which playbook 02-prepare-ceph runs after that role.
 
 - name: require local_registry
   ansible.builtin.assert:
@@ -33,7 +33,7 @@
     fail_msg: >-
       No *.tar.gz in {{ registry_images_dir }}.
       Put registry.tar.gz and the other image archives there
-      (see registry-images/README).
+      (see roles/cluster-init/files/README).
   run_once: true
 
 - name: deploy the local registry on the first mon

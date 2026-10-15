@@ -1,68 +1,24 @@
 ---
 # code: language=ansible
 #
-# Prepare hosts that are not in the cluster yet. Shared roles run for a new
-# cluster and for an extension. Playbooks 02 and 03 do not use this split.
+# OS-level host preparation (network, packages, tuning, users). No Ceph
+# cluster setup and no cluster_action — that is playbook 02-prepare-ceph.
 #
-#   [vse]   servers in the cluster
-#   [new]   servers being added, usually a new rack. Omit this group otherwise.
-# Role groups (mons, osds, s3_services, rack groups, ...) stay as they are.
-# Hosts in [new] may also be listed in [vse], the same way [osds] is.
-#
-#   -e srv=vse -e cluster_action=init
-#       New cluster. [new] is absent or empty.
-#   -e srv=new -e cluster_action=extend
-#       Prepare only [new]. Hosts in [vse] but not in [new] are already in
-#       the cluster; this play does not connect to them.
-#
-# roles/cluster-scope publishes:
-#   cluster_new_hosts        hosts this run prepares
-#   cluster_existing_hosts   already in the cluster (empty on init)
-#   cluster_hosts            existing members, then the hosts being prepared
-# Use cluster_hosts for a task that runs in both actions and needs every
-# cluster hostname (for example /etc/hosts on the hosts being prepared).
-# Tasks that belong to only one action go in roles/cluster-init or
-# roles/cluster-extend. Move that role up this list if it has to run
-# before a shared role.
-#
-#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=vse -e cluster_action=init
-#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=new -e cluster_action=extend
-#
-# The first play checks the action and the groups on the controller. It does
-# not connect to inventory hosts. The second play prepares only srv.
+#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=vse
+#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=new
 #
 # /etc/hosts is installed from <inventory_dir>/etc-hosts, next to group_vars.
-# Copy etc-hosts.example there and fill in IP FQDN shortname. Playbook 02
+# Copy etc-hosts.example there and fill in IP FQDN shortname. Playbook 03
 # installs the same file again.
 #
 # Copy group_vars/all.yml.sample to group_vars/all.yml and fill it in.
-# A new cluster loads <inventory_dir>/registry-images/*.tar.gz into a podman
-# registry on the first host in [mons].
 
-- name: Check how this prepare run is scoped
-  hosts: localhost
-  connection: local
-  gather_facts: false
-  become: false
-  tags: [preflight, cluster-scope]
-  tasks:
-    - name: validate cluster scope
-      ansible.builtin.import_role:
-        name: cluster-scope
-        tasks_from: validate.yml
-
-- name: Prepare hosts that are not in the cluster yet
+- name: Prepare OS on target hosts
   hosts: "{{ srv }}"
   gather_facts: true
   become: true
   vars_files:
     - ../secrets/vault.yml
-  pre_tasks:
-    - name: publish cluster host lists
-      ansible.builtin.import_role:
-        name: cluster-scope
-        tasks_from: publish.yml
-      tags: [preflight, cluster-scope]
   roles:
     - role: preflight
       tags: [preflight]
@@ -74,16 +30,8 @@
       tags: [network, hosts]
     - role: apt-repos
       tags: [packages, repos]
-    - role: ceph-service-users
-      tags: [users]
     - role: base-packages
       tags: [packages]
-    - role: podman
-      tags: [packages, podman, ceph]
-      # Writes registries.conf.d/ceph.conf. cluster-init registry setup
-      # runs later and refuses to push until this file marks local_registry insecure.
-    - role: ceph-packages
-      tags: [packages, ceph]
     - role: dnsmasq
       tags: [network, dns]
     - role: ntp
@@ -96,9 +44,3 @@
       tags: [storage]
     - role: unix-users
       tags: [users]
-    - role: cluster-init
-      tags: [init]
-      when: cluster_action == 'init'
-    - role: cluster-extend
-      tags: [extend]
-      when: cluster_action == 'extend'

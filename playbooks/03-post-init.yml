@@ -1,8 +1,11 @@
 ---
 # code: language=ansible
 #
-# Reinstalls /etc/hosts from <inventory_dir>/etc-hosts after the file has been
-# replaced between playbook 01 and this one. Same source as playbook 01.
+# Run after the UNIX group's init playbook (outside this repo).
+# Reinstalls /etc/hosts from <inventory_dir>/etc-hosts (same source as
+# playbook 01; often updated between 01 and this run).
+#
+#   ansible-playbook playbooks/03-post-init.yml -i <inventory> -e srv=vse
 
 - hosts: "{{ srv }}"
   gather_facts: true
@@ -20,8 +23,8 @@
       tags: [network, ntp]
     - role: ceph-cluster-info
       tags: [ceph]
-    - role: refresh-ceph-repo
-      tags: [packages, repos, ceph]
+    - role: ca-certs
+      tags: [certs, tls]
     - role: sssd-ldaps
       tags: [sssd, ldap, tls]
     - role: zabbix-agent

@@ -1,0 +1,9 @@
+---
+# Local cephadm .deb packages in roles/ceph-packages/files/.
+# Put one or more files named so the Ceph version appears in the filename, e.g.:
+#   roles/ceph-packages/files/cephadm_19.2.1-1noble_amd64.deb
+#   roles/ceph-packages/files/cephadm_18.2.4-1noble_amd64.deb
+# Selection uses ceph_repo_ver from group_vars (substring match).
+cephadm_packages_dir: "{{ role_path }}/files"
+cephadm_package_pattern: "*{{ ceph_repo_ver }}*.deb"
+cephadm_remote_deb: /var/tmp/cephadm-install.deb

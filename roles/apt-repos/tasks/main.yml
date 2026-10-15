@@ -44,24 +44,3 @@
     group: root
     mode: 0644
   loop: "{{ ubuntu_channels }}"
-
-- name: "Create ceph repo file"
-  template:
-    src: ceph-repo-template.j2
-    dest: "/etc/apt/sources.list.d/ceph_Ubuntu.list"
-    owner: root
-    group: root
-    mode: 0644
-
-- name: "Create ceph repo auth"
-  template:
-    src: ceph-auth-template.j2
-    dest: "/etc/apt/auth.conf.d/ceph.conf"
-    owner: root
-    group: root
-    mode: 0640
-
-- name: "Copy gpg for ceph repo"
-  copy:
-    src: other/ceph.gpg
-    dest: /etc/apt/trusted.gpg.d

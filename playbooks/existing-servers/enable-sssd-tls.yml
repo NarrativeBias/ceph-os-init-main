@@ -1,12 +1,15 @@
 ---
 # code: language=ansible
 #
-# Enable SSSD LDAPS (ad_use_ldaps) + install domain CA certs on already-deployed hosts.
-# Does not run the rest of 02-post-init (users, ntp, ceph-cluster-info, etc.).
+# Install AD CA trust (ca-certs) and enable SSSD LDAPS (sssd-ldaps) on
+# already-deployed hosts. Does not run the rest of 03-post-init.
 #
 # Prerequisites:
 #   - seg_fqdn set in inventory group_vars
-#   - certs in THIS repo: secrets/certs/<domain>/*.crt (shared; not per-inventory)
+#   - certs in roles/ca-certs/files/<env>/ (shared; not per-inventory):
+#       files/test/*.crt   # test.vtb.ru
+#       files/dev/*.crt    # corp.dev.vtb
+#       files/prod/*.crt   # cde.vtb, inet.vtb, cn-*.vtb, region.vtb.ru, vtbgroup.vtb.com
 #     Prefer plaintext PEM (CA certs are public). If vault-encrypted, pass
 #     --ask-vault-pass with the same password used to encrypt those files.
 #   - hosts already domain-joined with /etc/sssd/sssd.conf
@@ -18,6 +21,8 @@
 - hosts: "{{ srv }}"
   gather_facts: true
   become: true
+  # Override ansible.cfg any_errors_fatal: one bad host must not stop the rest.
+  any_errors_fatal: false
   pre_tasks:
     - name: require seg_fqdn
       ansible.builtin.assert:
@@ -26,5 +31,7 @@
           - seg_fqdn | length > 0
         fail_msg: "seg_fqdn must be set in group_vars for this inventory group."
   roles:
+    - role: ca-certs
+      tags: [certs, tls]
     - role: sssd-ldaps
       tags: [sssd, ldap, tls]

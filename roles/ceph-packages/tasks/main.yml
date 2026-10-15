@@ -1,6 +1,37 @@
-- name: Install cephadm
-  apt:
-    name: "cephadm={{ ceph_repo_ver }}-1{{ ubuntu_codename }}"
-    state: present
-    update_cache: yes
-    install_recommends: no
+---
+- name: discover cephadm package for ceph_repo_ver on controller
+  ansible.builtin.find:
+    paths: "{{ cephadm_packages_dir }}"
+    patterns:
+      - "{{ cephadm_package_pattern }}"
+    file_type: file
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: cephadm_deb_files
+
+- name: require exactly one cephadm package for this version
+  ansible.builtin.assert:
+    that:
+      - cephadm_deb_files.matched | int == 1
+    fail_msg: >-
+      Expected exactly one package matching '{{ cephadm_package_pattern }}'
+      in {{ cephadm_packages_dir }}/ (ceph_repo_ver={{ ceph_repo_ver }}).
+      Found {{ cephadm_deb_files.matched | int }}:
+      {{ cephadm_deb_files.files | map(attribute='path') | map('basename') | list | join(', ') | default('(none)') }}.
+  run_once: true
+
+- name: stage cephadm package on host
+  ansible.builtin.copy:
+    src: "{{ cephadm_deb_files.files[0].path }}"
+    dest: "{{ cephadm_remote_deb }}"
+    mode: "0644"
+
+- name: install cephadm from local package
+  ansible.builtin.apt:
+    deb: "{{ cephadm_remote_deb }}"
+
+- name: remove staged cephadm package
+  ansible.builtin.file:
+    path: "{{ cephadm_remote_deb }}"
+    state: absent

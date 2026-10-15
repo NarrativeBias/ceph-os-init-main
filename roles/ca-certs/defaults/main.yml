@@ -1,0 +1,17 @@
+---
+# AD domain (from seg_fqdn) -> CA environment under files/<env>/.
+# Longer / more specific domain names first (first match wins).
+ca_certs_domain_env:
+  vtbgroup.vtb.com: prod
+  corp.dev.vtb: dev
+  region.vtb.ru: prod
+  test.vtb.ru: test
+  cn-test.vtb: prod
+  cn-prod.vtb: prod
+  cn-inet.vtb: prod
+  inet.vtb: prod
+  cde.vtb: prod
+
+ca_certs_system_dir: /usr/local/share/ca-certificates
+# Role files: roles/ca-certs/files/{test,dev,prod}/*.crt
+ca_certs_base: "{{ role_path }}/files"

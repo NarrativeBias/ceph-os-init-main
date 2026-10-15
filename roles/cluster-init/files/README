@@ -1,4 +1,4 @@
-Put the image archives for a new cluster in this directory before playbook 01.
+Put the image archives for a new cluster in this directory before playbook 02-prepare-ceph.
 
 The first host in [mons] copies every *.tar.gz here to
 /var/lib/containers/registry-images, loads archives that are not already

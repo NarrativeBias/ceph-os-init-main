@@ -1,0 +1,85 @@
+---
+- name: resolve CA env from seg_fqdn
+  ansible.builtin.set_fact:
+    ca_certs_env: "{{ item.value }}"
+  loop: "{{ ca_certs_domain_env | dict2items }}"
+  when:
+    - ca_certs_env is not defined
+    - item.key == seg_fqdn or seg_fqdn.endswith('.' + item.key)
+
+- name: require a known CA env for seg_fqdn
+  ansible.builtin.assert:
+    that:
+      - ca_certs_env is defined
+      - ca_certs_env | length > 0
+    fail_msg: >-
+      seg_fqdn '{{ seg_fqdn }}' does not match any configured CA domain
+      ({{ ca_certs_domain_env.keys() | list | join(', ') }}).
+
+- name: discover CA certificates on controller
+  ansible.builtin.find:
+    paths: "{{ ca_certs_base }}/{{ ca_certs_env }}"
+    patterns:
+      - "*.crt"
+    file_type: file
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: ca_certs_files
+
+- name: require at least one CA certificate for env
+  ansible.builtin.assert:
+    that:
+      - ca_certs_files.matched | int > 0
+    fail_msg: >-
+      No .crt certificates found in {{ ca_certs_base }}/{{ ca_certs_env }}/
+      (expected chain files: root + intermediates).
+  run_once: true
+
+- name: ensure ca-certificates is installed
+  ansible.builtin.apt:
+    name: ca-certificates
+    state: present
+
+- name: find existing custom CA certificates
+  ansible.builtin.find:
+    paths: "{{ ca_certs_system_dir }}"
+    patterns:
+      - "*.crt"
+    file_type: file
+  register: ca_certs_existing
+
+- name: drop existing custom CA certificates before install
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ ca_certs_existing.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: ca_certs_existing.matched | int > 0
+  register: ca_certs_removed
+
+- name: ensure CA certificates directory exists
+  ansible.builtin.file:
+    path: "{{ ca_certs_system_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: install CA certificates into system trust store
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ca_certs_system_dir }}/{{ item.path | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ ca_certs_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: ca_certs_copy
+
+- name: update system CA certificates
+  ansible.builtin.command:
+    cmd: update-ca-certificates --fresh
+  when: ca_certs_removed.changed | default(false) or ca_certs_copy.changed | default(false)

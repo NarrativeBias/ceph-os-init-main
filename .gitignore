@@ -1,14 +1,20 @@
 *hosts
 !roles/etc-hosts/
 !roles/etc-hosts/**
-registry-images/*.tar.gz
-registry-images/*.tgz
 /group_vars/*yml
 uploads/*
 certs/*
-secrets/certs/**
-!secrets/certs/**/.gitkeep
 output/*
+
+# Role-local bulky artifacts (keep directory placeholders)
+roles/ca-certs/files/**/*.crt
+!roles/ca-certs/files/**/.gitkeep
+roles/ceph-packages/files/*.deb
+!roles/ceph-packages/files/.gitkeep
+roles/cluster-init/files/*.tar.gz
+roles/cluster-init/files/*.tgz
+!roles/cluster-init/files/.gitkeep
+!roles/cluster-init/files/README
 
 .vscode
 .idea

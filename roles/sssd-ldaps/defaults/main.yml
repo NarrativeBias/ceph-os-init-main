@@ -1,19 +1,18 @@
 ---
-# Domains that have CA material under secrets/certs/<domain>/
+# AD domains that may appear in seg_fqdn / [domain/...] in sssd.conf.
 # Longer / more specific names first (first match wins).
-sssd_tls_domains:
+sssd_ad_domains:
   - vtbgroup.vtb.com
+  - corp.dev.vtb
   - region.vtb.ru
   - test.vtb.ru
+  - cn-test.vtb
+  - cn-prod.vtb
+  - cn-inet.vtb
   - inet.vtb
   - cde.vtb
 
-sssd_ca_certificates_dir: /usr/local/share/ca-certificates
 sssd_conf_path: /etc/sssd/sssd.conf
 # LDAPS on 636 via DNS SRV for the domain. Do not set ldap_uri: that pins
 # servers and stops SSSD from refreshing the DC list and failing over.
 sssd_ad_use_ldaps: true
-# Always the playbook repo (next to roles/), NOT the inventory tree.
-# So many inventories can share one cert store:
-#   <ceph-os-init>/secrets/certs/<domain>/*.crt
-sssd_certs_base: "{{ role_path }}/../../secrets/certs"

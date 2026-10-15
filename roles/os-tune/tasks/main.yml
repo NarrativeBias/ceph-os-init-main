@@ -13,21 +13,10 @@
     path: /root/.bashrc
     marker: "# {mark} ANSIBLE MANAGED BLOCK - HISTORY"
     block: |
+      export HISTSIZE=50
+      export HISTFILESIZE=50
+      export HISTCONTROL=ignoreboth
       export HISTTIMEFORMAT='%F %T '
-      export HISTSIZE=10000
-      export HISTCONTROL=ignorespace
-
-- name: remove unused packages
-  ansible.builtin.apt:
-    name:
-      - snapd
-      - cloud-init
-      - aide
-      - ufw
-      - cloud-guest-utils
-    state: absent
-    purge: true
-    autoremove: true
 
 - name: disable apparmor service
   ansible.builtin.systemd:
