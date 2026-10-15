@@ -21,17 +21,35 @@
       {{ cephadm_deb_files.files | map(attribute='path') | map('basename') | list | join(', ') | default('(none)') }}.
   run_once: true
 
+- name: check installed cephadm version
+  ansible.builtin.command:
+    cmd: dpkg-query -W -f=${Version} cephadm
+  register: cephadm_dpkg
+  changed_when: false
+  failed_when: false
+
+- name: decide whether cephadm needs install
+  ansible.builtin.set_fact:
+    cephadm_needs_install: >-
+      {{
+        cephadm_dpkg.rc != 0
+        or ceph_repo_ver not in (cephadm_dpkg.stdout | default(''))
+      }}
+
 - name: stage cephadm package on host
   ansible.builtin.copy:
     src: "{{ cephadm_deb_files.files[0].path }}"
     dest: "{{ cephadm_remote_deb }}"
     mode: "0644"
+  when: cephadm_needs_install | bool
 
 - name: install cephadm from local package
   ansible.builtin.apt:
     deb: "{{ cephadm_remote_deb }}"
+  when: cephadm_needs_install | bool
 
 - name: remove staged cephadm package
   ansible.builtin.file:
     path: "{{ cephadm_remote_deb }}"
     state: absent
+  when: cephadm_needs_install | bool

@@ -1,0 +1,66 @@
+---
+# Apply mon + mgr placement from inventory [mons], then wait until full.
+
+- name: require mons group for mon/mgr apply
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+    fail_msg: Inventory group 'mons' must list monitors for orch placement.
+  run_once: true
+
+- name: resolve each mon placement name
+  ansible.builtin.set_fact:
+    ceph_orch_mon_placement_names: >-
+      {{
+        (ceph_orch_mon_placement_names | default([]))
+        + [
+            hostvars[item].ceph_orch_host_name
+            | default(hostvars[item].ansible_fqdn | default(item))
+          ]
+      }}
+  loop: "{{ groups['mons'] }}"
+  run_once: true
+
+- name: publish mon/mgr placement string
+  ansible.builtin.set_fact:
+    ceph_orch_mon_placement: "{{ ceph_orch_mon_placement_names | join(',') }}"
+  run_once: true
+
+- name: apply mon service placement
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - apply
+      - mon
+      - --placement
+      - "{{ ceph_orch_mon_placement }}"
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: apply mgr service placement
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - apply
+      - mgr
+      - --placement
+      - "{{ ceph_orch_mon_placement }}"
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: wait until mon/mgr services are full
+  ansible.builtin.include_role:
+    name: ceph-orch-wait
+  vars:
+    ceph_orch_wait_services: "{{ ceph_orch_mons_wait_services }}"
+    ceph_orch_wait_retries: "{{ ceph_orch_mons_wait_retries }}"
+    ceph_orch_wait_delay: "{{ ceph_orch_mons_wait_delay }}"

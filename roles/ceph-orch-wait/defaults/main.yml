@@ -1,0 +1,5 @@
+---
+# Wait until ceph orch ls JSON has status.running == status.size for each name.
+ceph_orch_wait_services: []
+ceph_orch_wait_retries: 10
+ceph_orch_wait_delay: 30

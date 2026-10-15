@@ -1,0 +1,6 @@
+---
+# Applied after hosts join orch, before mon/mgr placement.
+ceph_orch_agent_services:
+  - crash
+  - node-exporter
+  - ceph-exporter

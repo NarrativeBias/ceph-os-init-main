@@ -1,0 +1,6 @@
+---
+ceph_orch_mons_wait_retries: 10
+ceph_orch_mons_wait_delay: 30
+ceph_orch_mons_wait_services:
+  - mon
+  - mgr

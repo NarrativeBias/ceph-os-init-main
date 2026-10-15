@@ -2,7 +2,7 @@
 # code: language=ansible
 #
 # Install AD CA trust (ca-certs) and enable SSSD LDAPS (sssd-ldaps) on
-# already-deployed hosts. Does not run the rest of 03-post-init.
+# already-deployed hosts. Does not run the rest of 05-post-init.
 #
 # Prerequisites:
 #   - seg_fqdn set in inventory group_vars

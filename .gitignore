@@ -2,6 +2,9 @@
 !roles/etc-hosts/
 !roles/etc-hosts/**
 /group_vars/*yml
+/group_vars/*yaml
+!/group_vars/*.sample
+!/group_vars/*.example
 uploads/*
 certs/*
 output/*
@@ -11,10 +14,10 @@ roles/ca-certs/files/**/*.crt
 !roles/ca-certs/files/**/.gitkeep
 roles/ceph-packages/files/*.deb
 !roles/ceph-packages/files/.gitkeep
-roles/cluster-init/files/*.tar.gz
-roles/cluster-init/files/*.tgz
-!roles/cluster-init/files/.gitkeep
-!roles/cluster-init/files/README
+registry-images/*.tar.gz
+registry-images/*.tgz
+registry-images/*.tar.zst
+!registry-images/README
 
 .vscode
 .idea

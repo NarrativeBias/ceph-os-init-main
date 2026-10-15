@@ -1,0 +1,193 @@
+---
+# Post-bootstrap Ceph mgr/orch tuning. First host in [mons] only.
+
+- name: require mons group for post-bootstrap
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+      - groups['mons'][0] in ansible_play_hosts_all
+    fail_msg: >-
+      Inventory group 'mons' must list monitors, and its first host must be
+      in this play (post-bootstrap runs there).
+  run_once: true
+
+- name: require ceph.conf on first mon
+  ansible.builtin.stat:
+    path: /etc/ceph/ceph.conf
+  register: ceph_post_conf_stat
+  when: inventory_hostname == groups['mons'][0]
+
+- name: require completed bootstrap before post-bootstrap
+  ansible.builtin.assert:
+    that:
+      - ceph_post_conf_stat.stat.exists | default(false)
+    fail_msg: /etc/ceph/ceph.conf missing on first mon; run ceph-bootstrap first.
+  when: inventory_hostname == groups['mons'][0]
+
+- name: require public_networks
+  ansible.builtin.assert:
+    that:
+      - public_networks is defined
+      - public_networks | length > 0
+      - public_networks | reject('match', '^.+/.+$') | list | length == 0
+    fail_msg: >-
+      public_networks must be a non-empty list of CIDRs (one /27 per rack),
+      e.g. ['10.0.0.0/27', '10.0.0.32/27']
+      (got '{{ public_networks | default('undefined') }}').
+  run_once: true
+
+- name: set public_network (global, mon, osd)
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - config
+      - set
+      - "{{ item }}"
+      - public_network
+      - "{{ ceph_post_bootstrap_public_network }}"
+  loop:
+    - global
+    - mon
+    - osd
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: set node-exporter container image for cephadm
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - config
+      - set
+      - mgr
+      - mgr/cephadm/container_image_node_exporter
+      - "{{ ceph_post_bootstrap_node_exporter_image }}"
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: apply node-exporter service
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - apply
+      - node-exporter
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: apply ceph-exporter service
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - apply
+      - ceph-exporter
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: enable prometheus mgr module
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - mgr
+      - module
+      - enable
+      - prometheus
+  when: inventory_hostname == groups['mons'][0]
+  register: ceph_post_prometheus
+  changed_when: "'already enabled' not in (ceph_post_prometheus.stderr | default('') + ceph_post_prometheus.stdout | default(''))"
+  failed_when:
+    - ceph_post_prometheus.rc != 0
+    - "'already enabled' not in (ceph_post_prometheus.stderr | default('') + ceph_post_prometheus.stdout | default(''))"
+
+- name: turn balancer off
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - balancer
+      - off
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: turn progress off
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - progress
+      - off
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: disable nfs mgr module
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - mgr
+      - module
+      - disable
+      - nfs
+  when: inventory_hostname == groups['mons'][0]
+  register: ceph_post_nfs
+  changed_when: "'already disabled' not in (ceph_post_nfs.stderr | default('') + ceph_post_nfs.stdout | default(''))"
+  failed_when:
+    - ceph_post_nfs.rc != 0
+    - "'already disabled' not in (ceph_post_nfs.stderr | default('') + ceph_post_nfs.stdout | default(''))"
+    - "'No module named' not in (ceph_post_nfs.stderr | default('') + ceph_post_nfs.stdout | default(''))"
+    - "'not found' not in (ceph_post_nfs.stderr | default('') + ceph_post_nfs.stdout | default(''))"
+
+- name: disable restful mgr module
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - mgr
+      - module
+      - disable
+      - restful
+  when: inventory_hostname == groups['mons'][0]
+  register: ceph_post_restful
+  changed_when: "'already disabled' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
+  failed_when:
+    - ceph_post_restful.rc != 0
+    - "'already disabled' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
+    - "'No module named' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
+    - "'not found' not in (ceph_post_restful.stderr | default('') + ceph_post_restful.stdout | default(''))"
+
+- name: restart mgr via orch
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - restart
+      - mgr
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true

@@ -1,6 +1,6 @@
 ---
 # Local registry on the first mon. Image archives live in registry_images_dir
-# on the controller (default: roles/cluster-init/files/) and are staged
+# on the controller (default: <repo>/registry-images/) and are staged
 # on the mon under /var/lib/containers/registry-images.
 #
 # Push and pull use the insecure setting written by the podman role in
@@ -20,20 +20,22 @@
 - name: find image archives on the controller
   ansible.builtin.find:
     paths: "{{ registry_images_dir }}"
-    patterns: "*.tar.gz"
+    patterns:
+      - "*.tar.gz"
+      - "*.tar.zst"
   delegate_to: localhost
   become: false
   run_once: true
   register: registry_archives
 
-- name: image archive directory must contain tar.gz files
+- name: image archive directory must contain archives
   ansible.builtin.assert:
     that:
       - registry_archives.files | default([]) | length > 0
     fail_msg: >-
-      No *.tar.gz in {{ registry_images_dir }}.
-      Put registry.tar.gz and the other image archives there
-      (see roles/cluster-init/files/README).
+      No *.tar.gz or *.tar.zst in {{ registry_images_dir }}.
+      Put registry.tar.gz (or .tar.zst) and the other image archives there
+      (see registry-images/README).
   run_once: true
 
 - name: deploy the local registry on the first mon
@@ -103,7 +105,7 @@
       loop_control:
         label: "{{ item.path | basename }}"
       register: registry_loads
-      changed_when: "'Loaded image' in stdout"
+      changed_when: "'Loaded image' in (stdout | default(''))"
 
     - name: list loaded images
       ansible.builtin.command:
@@ -119,7 +121,7 @@
       ansible.builtin.set_fact:
         registry_container_image: "{{ loaded_images.stdout_lines | select('search', 'registry') | list | first | default('') }}"
         images_to_publish: "{{ loaded_images.stdout_lines | reject('search', 'registry') | reject('equalto', '<none>:<none>') | list }}"
-        freshly_loaded_images: "{{ registry_loads.results | map(attribute='stdout') | map('split', '\n') | flatten | select('search', '^Loaded image') | map('regex_replace', '^Loaded image:\\s*', '') | list }}"
+        freshly_loaded_images: "{{ registry_loads.results | map(attribute='stdout', default='') | map('split', '\n') | flatten | select('search', '^Loaded image') | map('regex_replace', '^Loaded image:\\s*', '') | list }}"
 
     - name: registry image must have been loaded
       ansible.builtin.assert:
@@ -127,10 +129,11 @@
           - registry_container_image | length > 0
         fail_msg: >-
           None of the loaded images is the registry.
-          Add registry.tar.gz to {{ registry_images_dir }}.
+          Add registry.tar.gz or registry.tar.zst to {{ registry_images_dir }}.
 
     - name: check whether the registry service is active
-      ansible.builtin.command: systemctl is-active container-registry.service
+      ansible.builtin.command:
+        cmd: systemctl is-active container-registry.service
       register: registry_active
       changed_when: false
       failed_when: false
@@ -195,9 +198,10 @@
         podman push --tls-verify=false "$new"
         podman image rm "$new"
         podman pull --tls-verify=false "$new"
+        echo "published $new"
       args:
         executable: /bin/bash
       loop: "{{ images_to_publish }}"
       loop_control:
         label: "{{ item }}"
-      changed_when: "'already ' not in stdout"
+      changed_when: "'already ' not in (stdout | default(''))"

@@ -1,0 +1,49 @@
+---
+# code: language=ansible
+#
+# After 02-prepare-ceph (bootstrap + post-bootstrap on the first mon).
+# Prepares every host in scope for cluster membership: pull images,
+# install the cephorch SSH key, add hosts to orch (IP must be in
+# public_networks), wait for crash/node-exporter/ceph-exporter, apply
+# mon/mgr placement. Disk/OSD work is playbook 04-deploy-osds.
+#
+#   [vse] / [new] and cluster_action work the same as playbook 02.
+#
+#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=vse -e cluster_action=init
+#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=new -e cluster_action=extend
+
+- name: Check how this Ceph deploy run is scoped
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tags: [preflight, cluster-scope]
+  tasks:
+    - name: validate cluster scope
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: validate.yml
+
+- name: Deploy Ceph onto hosts that are not in the cluster yet
+  hosts: "{{ srv }}"
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../secrets/vault.yml
+  pre_tasks:
+    - name: publish cluster host lists
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: publish.yml
+      tags: [preflight, cluster-scope]
+  roles:
+    - role: preflight
+      tags: [preflight]
+    - role: prepare-ceph-node
+      tags: [ceph, images]
+    - role: ceph-orch-hosts
+      tags: [ceph, orch, hosts]
+    - role: ceph-orch-agents
+      tags: [ceph, orch, agents]
+    - role: ceph-orch-mons
+      tags: [ceph, orch, mons, mgr]

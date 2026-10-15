@@ -14,7 +14,8 @@
       - etc_hosts_file.stat.size | default(0) > 0
     fail_msg: >-
       {{ etc_hosts_src }} is missing or empty.
-      Copy etc-hosts.example there and fill in one line per host: IP FQDN shortname.
+      Copy group_vars/etc-hosts.example to {{ inventory_dir }}/group_vars/etc-hosts
+      and fill in one line per host: IP FQDN shortname.
   run_once: true
 
 - name: install /etc/hosts

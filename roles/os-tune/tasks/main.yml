@@ -1,11 +1,13 @@
 ---
 - name: get current timezone
-  ansible.builtin.command: timedatectl show -p Timezone --value
+  ansible.builtin.command:
+    cmd: timedatectl show -p Timezone --value
   register: current_tz
   changed_when: false
 
 - name: set timezone to Europe/Moscow
-  ansible.builtin.command: timedatectl set-timezone Europe/Moscow
+  ansible.builtin.command:
+    cmd: timedatectl set-timezone Europe/Moscow
   when: current_tz.stdout != "Europe/Moscow"
 
 - name: configure root shell history
@@ -33,7 +35,7 @@
     content: |
       GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX apparmor=0"
 
-- name: grub settings for Ceph
+- name: apply grub kernel cmdline drops
   ansible.builtin.copy:
     dest: /etc/default/grub.d/ceph.cfg
     mode: "0644"
@@ -46,7 +48,8 @@
       GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} cpufreq.default_governor=performance"
 
 - name: update grub
-  ansible.builtin.command: update-grub2
+  ansible.builtin.command:
+    cmd: update-grub2
   changed_when: true
 
 - name: disable systemd pager via pam_env
@@ -65,7 +68,7 @@
       53 23 * * * root /usr/lib/sysstat/sa2 -A
       */1 * * * * root /usr/lib/sysstat/sa1 1 1
 
-- name: sysctl settings for Ceph
+- name: apply sysctl tuning
   ansible.builtin.copy:
     dest: /etc/sysctl.d/99-ceph.conf
     mode: "0644"

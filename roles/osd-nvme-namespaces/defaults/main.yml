@@ -1,0 +1,11 @@
+---
+# Namespace size (nvme create-ns --nsze/--ncap) per controller model string
+# (trailing spaces from sysfs are trimmed before lookup).
+osd_nvme_namespace_sizes:
+  MZQL215THBLA-00A07: 14900000000
+  MZQL27T6HBLA-00A07: 7400000000
+  SSDPF2KX153T1: 15000000000
+  SSDPF2KX076TZ: 7500000000
+
+# Controllers considered: /sys/class/nvme/nvme0 .. nvme7
+osd_nvme_ctrl_glob: "/sys/class/nvme/nvme[0-7]"

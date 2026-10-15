@@ -1,0 +1,31 @@
+---
+# Ensure cluster-wide agent services exist, then wait until they are full
+# on the current host set (running == size).
+
+- name: require mons group for orch agents
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+    fail_msg: Inventory group 'mons' must list monitors (orch commands run on the first).
+  run_once: true
+
+- name: apply orch agent service
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --
+      - ceph
+      - orch
+      - apply
+      - "{{ item }}"
+  loop: "{{ ceph_orch_agent_services }}"
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: true
+
+- name: wait until agent services are full
+  ansible.builtin.include_role:
+    name: ceph-orch-wait
+  vars:
+    ceph_orch_wait_services: "{{ ceph_orch_agent_services }}"

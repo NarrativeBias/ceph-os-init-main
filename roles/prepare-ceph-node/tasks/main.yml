@@ -1,13 +1,29 @@
-- name: copy cephorch key
-  authorized_key:
-    user: cephorch
-    state: present
-    key: '{{ item }}'
-  with_file:
-    - /etc/ceph/ceph.pub
+---
 - name: pull ceph base container
-  shell: 'podman pull {{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}'
-- name: pull ceph-node-exporter container
-  shell: 'podman pull {{ local_registry }}/prom/node-exporter:v{{ node_exporter_ver }}'
+  ansible.builtin.command:
+    cmd: "podman pull {{ local_registry }}/ubuntu/ceph:v{{ ceph_repo_ver }}"
 
-  
+- name: pull ceph-node-exporter container
+  ansible.builtin.command:
+    cmd: "podman pull {{ local_registry }}/prom/node-exporter:v{{ node_exporter_ver }}"
+
+- name: read cephorch SSH public key from first mon
+  ansible.builtin.slurp:
+    src: /etc/ceph/ceph.pub
+  register: cephorch_pub_raw
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+  when:
+    - "'mons' in groups"
+    - groups['mons'] | length > 0
+
+- name: install cephorch authorized key
+  authorized_key:
+    user: "{{ ceph_bootstrap_ssh_user }}"
+    key: "{{ hostvars[ansible_play_hosts_all[0]].cephorch_pub_raw.content | b64decode }}"
+    state: present
+  when:
+    - "'mons' in groups"
+    - groups['mons'] | length > 0
+    - hostvars[ansible_play_hosts_all[0]].cephorch_pub_raw is defined
+    - hostvars[ansible_play_hosts_all[0]].cephorch_pub_raw.content is defined

@@ -21,7 +21,8 @@
   when: s3_folder_check.stat.exists and s3_folder_check.stat.isdir
 
 - name: move s3 init folder from tmpusr to production admin
-  ansible.builtin.command: "mv /home/tmpusr/ceph-s3-init-main {{ s3_user_home.stdout }}/ceph-s3-init-main"
+  ansible.builtin.command:
+    cmd: "mv /home/tmpusr/ceph-s3-init-main {{ s3_user_home.stdout }}/ceph-s3-init-main"
   delegate_to: localhost
   run_once: true
   when:

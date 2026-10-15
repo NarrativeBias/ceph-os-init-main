@@ -1,0 +1,29 @@
+---
+# Default NVMe data devices (8 controllers × 2 namespaces).
+ceph_osd_data_device_paths:
+  - /dev/nvme0n1
+  - /dev/nvme1n1
+  - /dev/nvme2n1
+  - /dev/nvme3n1
+  - /dev/nvme4n1
+  - /dev/nvme5n1
+  - /dev/nvme6n1
+  - /dev/nvme7n1
+  - /dev/nvme0n2
+  - /dev/nvme1n2
+  - /dev/nvme2n2
+  - /dev/nvme3n2
+  - /dev/nvme4n2
+  - /dev/nvme5n2
+  - /dev/nvme6n2
+  - /dev/nvme7n2
+
+ceph_osd_filter_logic: AND
+ceph_osd_objectstore: bluestore
+ceph_osd_unmanaged: false
+
+ceph_osd_spec_remote: /var/tmp/osds.spec
+
+# OSD bring-up is slower than mon/mgr; tune if needed.
+ceph_osd_wait_retries: 30
+ceph_osd_wait_delay: 30

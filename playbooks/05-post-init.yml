@@ -2,10 +2,10 @@
 # code: language=ansible
 #
 # Run after the UNIX group's init playbook (outside this repo).
-# Reinstalls /etc/hosts from <inventory_dir>/etc-hosts (same source as
-# playbook 01; often updated between 01 and this run).
+# Reinstalls /etc/hosts from <inventory_dir>/group_vars/etc-hosts (same
+# source as playbook 01; often updated between 01 and this run).
 #
-#   ansible-playbook playbooks/03-post-init.yml -i <inventory> -e srv=vse
+#   ansible-playbook playbooks/05-post-init.yml -i <inventory> -e srv=vse
 
 - hosts: "{{ srv }}"
   gather_facts: true

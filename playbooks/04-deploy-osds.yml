@@ -1,0 +1,41 @@
+---
+# code: language=ansible
+#
+# After 03-deploy-ceph. On {{ srv }}:&osds: split empty NVMe controllers
+# into two namespaces, then ceph orch apply per-host OSD specs (same shape
+# as the old nvme OSD spec helper; hosts come from inventory).
+#
+#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=vse -e cluster_action=init
+#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=new -e cluster_action=extend
+
+- name: Check how this OSD deploy run is scoped
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tags: [preflight, cluster-scope]
+  tasks:
+    - name: validate cluster scope
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: validate.yml
+
+- name: Prepare disks and deploy OSDs on hosts in scope
+  hosts: "{{ srv }}:&osds"
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../secrets/vault.yml
+  pre_tasks:
+    - name: publish cluster host lists
+      ansible.builtin.import_role:
+        name: cluster-scope
+        tasks_from: publish.yml
+      tags: [preflight, cluster-scope]
+  roles:
+    - role: preflight
+      tags: [preflight]
+    - role: osd-nvme-namespaces
+      tags: [ceph, osd, nvme]
+    - role: ceph-orch-osds
+      tags: [ceph, osd, orch]

@@ -1,0 +1,99 @@
+---
+# Runs cephadm bootstrap on the first host in [mons] (inventory order). Init only.
+# cephorch authorized_keys are installed later by playbook 03 (prepare-ceph-node).
+
+- name: require mons group for bootstrap
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+      - groups['mons'][0] in ansible_play_hosts_all
+    fail_msg: >-
+      Inventory group 'mons' must list monitors, and its first host must be
+      in this play (bootstrap runs there).
+  run_once: true
+
+- name: require cluster_network
+  ansible.builtin.assert:
+    that:
+      - cluster_network is defined
+      - cluster_network | length > 0
+      - cluster_network is match('^.+/.+$')
+    fail_msg: >-
+      cluster_network must be set (CIDR), e.g. 10.0.0.0/27
+      (got '{{ cluster_network | default('undefined') }}').
+  run_once: true
+
+- name: check whether ceph is already configured on first mon
+  ansible.builtin.stat:
+    path: /etc/ceph/ceph.conf
+  register: ceph_conf_stat
+  when: inventory_hostname == groups['mons'][0]
+
+- name: mark bootstrap needed on first mon
+  ansible.builtin.set_fact:
+    ceph_bootstrap_needed: true
+  when:
+    - inventory_hostname == groups['mons'][0]
+    - >-
+      not (ceph_bootstrap_skip_if_configured | bool)
+      or not (ceph_conf_stat.stat.exists | default(false))
+
+- name: mark bootstrap not needed elsewhere
+  ansible.builtin.set_fact:
+    ceph_bootstrap_needed: false
+  when: ceph_bootstrap_needed is not defined
+
+- name: resolve mon IP from {{ ceph_bootstrap_mon_iface }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ip -o -4 addr show dev {{ ceph_bootstrap_mon_iface }} \
+      | awk '{print $4}' | cut -d/ -f1 | head -1
+  args:
+    executable: /bin/bash
+  register: ceph_bootstrap_mon_ip_cmd
+  changed_when: false
+  when: ceph_bootstrap_needed | bool
+
+- name: require mon IP
+  ansible.builtin.assert:
+    that:
+      - ceph_bootstrap_mon_ip_cmd.stdout | default('') | length > 0
+    fail_msg: >-
+      Could not resolve IPv4 address on {{ ceph_bootstrap_mon_iface }}
+      for bootstrap --mon-ip.
+  when: ceph_bootstrap_needed | bool
+
+- name: stage ceph.conf.bootstrap on first mon
+  ansible.builtin.copy:
+    src: ceph.conf.bootstrap
+    dest: "{{ ceph_bootstrap_config_remote }}"
+    mode: "0644"
+  when: ceph_bootstrap_needed | bool
+
+- name: bootstrap Ceph cluster with cephadm
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - --image
+      - "{{ ceph_bootstrap_image }}"
+      - bootstrap
+      - --skip-monitoring-stack
+      - --skip-dashboard
+      - --config
+      - "{{ ceph_bootstrap_config_remote }}"
+      - --allow-fqdn-hostname
+      - --ssh-user
+      - "{{ ceph_bootstrap_ssh_user }}"
+      - --mon-ip
+      - "{{ ceph_bootstrap_mon_ip_cmd.stdout | trim }}"
+      - --cluster-network
+      - "{{ cluster_network }}"
+      - --log-to-file
+  when: ceph_bootstrap_needed | bool
+
+- name: remove staged ceph.conf.bootstrap
+  ansible.builtin.file:
+    path: "{{ ceph_bootstrap_config_remote }}"
+    state: absent
+  when: ceph_bootstrap_needed | bool

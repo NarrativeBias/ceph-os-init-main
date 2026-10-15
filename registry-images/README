@@ -1,0 +1,11 @@
+Put the image archives for a new cluster in this directory before playbook 02-prepare-ceph.
+
+Accepted formats: *.tar.gz and *.tar.zst (podman load -i).
+
+The first host in [mons] copies every matching archive here to
+/var/lib/containers/registry-images, loads archives that are not already
+loaded, and publishes images that are not already present in the local registry.
+
+registry.tar.gz (or registry.tar.zst) has to be in the directory. It is the
+registry image and is not pushed. Typical companions are the ceph, grafana,
+haproxy, node-exporter, and victoriametrics archives.

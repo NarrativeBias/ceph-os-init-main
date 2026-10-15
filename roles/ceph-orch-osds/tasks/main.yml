@@ -1,0 +1,63 @@
+---
+# Build per-host OSD specs (historic nvme OSD YAML shape) from inventory
+# play hosts, apply on the first mon, wait until each osd.<id> is full.
+
+- name: require mons group for OSD apply
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+      - ansible_play_hosts_all | length > 0
+    fail_msg: Need [mons] and at least one OSD host in this play.
+  run_once: true
+
+- name: publish OSD service identity
+  ansible.builtin.set_fact:
+    ceph_osd_service_id: "{{ ansible_hostname }}"
+    ceph_osd_placement_host: "{{ ceph_orch_host_name | default(ansible_fqdn) }}"
+    ceph_osd_service_name: "osd.{{ ansible_hostname }}"
+
+- name: stage combined OSD orch spec on first mon
+  ansible.builtin.template:
+    src: osds.spec.j2
+    dest: "{{ ceph_osd_spec_remote }}"
+    mode: "0644"
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+
+- name: apply OSD specs via orch
+  ansible.builtin.command:
+    argv:
+      - cephadm
+      - shell
+      - --mount
+      - "{{ ceph_osd_spec_remote }}"
+      - --
+      - ceph
+      - orch
+      - apply
+      - -i
+      - "/mnt/{{ ceph_osd_spec_remote | basename }}"
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+  changed_when: true
+
+- name: remove staged OSD orch spec
+  ansible.builtin.file:
+    path: "{{ ceph_osd_spec_remote }}"
+    state: absent
+  delegate_to: "{{ groups['mons'][0] }}"
+  run_once: true
+
+- name: wait until OSD services are full
+  ansible.builtin.include_role:
+    name: ceph-orch-wait
+  vars:
+    ceph_orch_wait_services: >-
+      {{
+        ansible_play_hosts_all
+        | map('extract', hostvars, 'ceph_osd_service_name')
+        | list
+      }}
+    ceph_orch_wait_retries: "{{ ceph_osd_wait_retries }}"
+    ceph_orch_wait_delay: "{{ ceph_osd_wait_delay }}"

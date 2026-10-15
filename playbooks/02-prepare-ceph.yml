@@ -2,7 +2,8 @@
 # code: language=ansible
 #
 # Ceph/cluster preparation after OS prep (01-prepare-srv). Sets up Ceph
-# users and packages, podman + local registry (init), and pulls node images.
+# users and packages, podman + local registry (init), and bootstraps the
+# cluster on the first [mons] host. Host join / images / OSDs are playbook 03.
 #
 #   [vse]   servers in the cluster
 #   [new]   servers being added, usually a new rack. Omit this group otherwise.
@@ -26,8 +27,8 @@
 #   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=vse -e cluster_action=init
 #   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=new -e cluster_action=extend
 #
-# A new cluster loads roles/cluster-init/files/*.tar.gz into a podman
-# registry on the first host in [mons], then prepare-ceph-node pulls images.
+# Init: load registry-images/* on the first [mons] host, cephadm bootstrap,
+# then ceph-post-bootstrap (orch/mgr) on that same mon only.
 
 - name: Check how this Ceph prepare run is scoped
   hosts: localhost
@@ -70,5 +71,9 @@
     - role: cluster-extend
       tags: [extend, ceph]
       when: cluster_action == 'extend'
-    - role: prepare-ceph-node
-      tags: [ceph, images]
+    - role: ceph-bootstrap
+      tags: [ceph, bootstrap, init]
+      when: cluster_action == 'init'
+    - role: ceph-post-bootstrap
+      tags: [ceph, bootstrap, post-bootstrap, init]
+      when: cluster_action == 'init'

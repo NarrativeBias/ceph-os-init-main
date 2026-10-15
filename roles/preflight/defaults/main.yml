@@ -21,6 +21,8 @@ preflight_required_vars:
   - m_repo
   - aroot_postinit
   - sdsadmin_passwd
+  - cluster_network
+  - public_networks
 
 # Extra vault vars per environment_type
 preflight_env_required_vars:

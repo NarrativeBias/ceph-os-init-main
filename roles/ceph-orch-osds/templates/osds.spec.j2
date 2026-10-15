@@ -1,0 +1,19 @@
+{# One OSD service spec per host in the current play ({{ srv }}:&osds). #}
+{% for host in ansible_play_hosts_all %}
+---
+service_type: osd
+service_id: {{ hostvars[host].ceph_osd_service_id }}
+service_name: osd.{{ hostvars[host].ceph_osd_service_id }}
+placement:
+  hosts:
+  - {{ hostvars[host].ceph_osd_placement_host }}
+unmanaged: {{ ceph_osd_unmanaged | bool | lower }}
+spec:
+  data_devices:
+    paths:
+{% for path in ceph_osd_data_device_paths %}
+    - {{ path }}
+{% endfor %}
+  filter_logic: {{ ceph_osd_filter_logic }}
+  objectstore: {{ ceph_osd_objectstore }}
+{% endfor %}

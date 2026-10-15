@@ -1,0 +1,46 @@
+---
+# Poll `ceph orch ls --format json` until every service in
+# ceph_orch_wait_services has status.running == status.size (and size >= 1).
+# Runs on the first mon only.
+
+- name: require mons group for orch wait
+  ansible.builtin.assert:
+    that:
+      - "'mons' in groups"
+      - groups['mons'] | length > 0
+      - ceph_orch_wait_services | length > 0
+    fail_msg: >-
+      Need inventory [mons] and a non-empty ceph_orch_wait_services list
+      (got {{ ceph_orch_wait_services | default([]) }}).
+  run_once: true
+
+- name: wait until orch services are full (running == size)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cephadm shell -- ceph orch ls --format json | python3 -c '
+    import json, sys
+    wanted = set(sys.argv[1].split(","))
+    services = {s["service_name"]: s.get("status") or {} for s in json.load(sys.stdin)}
+    missing = sorted(wanted - set(services))
+    if missing:
+        print("missing services: " + ", ".join(missing), file=sys.stderr)
+        sys.exit(1)
+    bad = []
+    for name in sorted(wanted):
+        st = services[name]
+        running = st.get("running")
+        size = st.get("size")
+        if running is None or size is None or running != size or size < 1:
+            bad.append("%s %s/%s" % (name, running, size))
+    if bad:
+        print("not full: " + "; ".join(bad), file=sys.stderr)
+        sys.exit(1)
+    ' "{{ ceph_orch_wait_services | join(',') }}"
+  args:
+    executable: /bin/bash
+  register: ceph_orch_wait_result
+  retries: "{{ ceph_orch_wait_retries }}"
+  delay: "{{ ceph_orch_wait_delay }}"
+  until: ceph_orch_wait_result.rc == 0
+  when: inventory_hostname == groups['mons'][0]
+  changed_when: false

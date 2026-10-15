@@ -7,11 +7,11 @@
 #   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=vse
 #   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=new
 #
-# /etc/hosts is installed from <inventory_dir>/etc-hosts, next to group_vars.
-# Copy etc-hosts.example there and fill in IP FQDN shortname. Playbook 03
-# installs the same file again.
+# /etc/hosts is installed from <inventory_dir>/group_vars/etc-hosts.
+# Copy group_vars/etc-hosts.example there and fill in IP FQDN shortname.
+# Playbook 03 installs the same file again.
 #
-# Copy group_vars/all.yml.sample to group_vars/all.yml and fill it in.
+# Copy group_vars/deployment.yaml.sample to group_vars/deployment.yaml and fill it in.
 
 - name: Prepare OS on target hosts
   hosts: "{{ srv }}"
