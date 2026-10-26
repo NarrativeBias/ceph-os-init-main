@@ -1,0 +1,38 @@
+---
+- name: require cluster_name
+  ansible.builtin.assert:
+    that:
+      - cluster_name is defined
+      - cluster_name | length > 0
+    fail_msg: cluster_name must be set in group_vars/deployment.yaml.
+  run_once: true
+
+- name: require fs_cmdb_size for OSD hosts
+  ansible.builtin.assert:
+    that:
+      - fs_cmdb_size is defined
+      - fs_cmdb_size | string | length > 0
+    fail_msg: >-
+      fs_cmdb_size must be set in group_vars/deployment.yaml for hosts in
+      [{{ cmdb_osd_group }}] (got '{{ inventory_hostname }}').
+  when: cmdb_osd_group in group_names
+
+- name: resolve HOST_REAL_SIZE for this host
+  ansible.builtin.set_fact:
+    cmdb_host_real_size: "{{ fs_cmdb_size if (cmdb_osd_group in group_names) else 0 }}"
+
+- name: ensure {{ cmdb_ini_dir }} exists
+  ansible.builtin.file:
+    path: "{{ cmdb_ini_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: install {{ cmdb_ini_dest }}
+  ansible.builtin.template:
+    src: cmdb.ini.j2
+    dest: "{{ cmdb_ini_dest }}"
+    owner: root
+    group: root
+    mode: "0644"

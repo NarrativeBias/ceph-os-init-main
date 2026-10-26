@@ -4,6 +4,7 @@
 # Run after the UNIX group's init playbook (outside this repo).
 # Reinstalls /etc/hosts from <inventory_dir>/group_vars/etc-hosts (same
 # source as playbook 01; often updated between 01 and this run).
+# Also writes /etc/ceph/cmdb.ini (CLUSTER_NAME + HOST_REAL_SIZE).
 #
 #   ansible-playbook playbooks/05-post-init.yml -i <inventory> -e srv=deployment
 
@@ -17,6 +18,8 @@
       tags: [preflight]
     - role: etc-hosts
       tags: [network, hosts]
+    - role: cmdb-ini
+      tags: [ceph, cmdb]
     - role: reconcile-users
       tags: [users]
     - role: ntp

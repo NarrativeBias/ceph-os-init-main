@@ -64,7 +64,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 | `02-prepare-ceph` | Ceph-пользователи, локальный `cephadm` .deb, podman, registry (init), `cephadm bootstrap` + post-bootstrap на первом mon при init (`cluster_network`). |
 | `03-deploy-ceph` | Pull образов, ключ cephorch, `orch host add` (IP ∈ `public_networks`), crash/node-exporter/ceph-exporter, mon/mgr по `[mons]` с ожиданием running==size. |
 | `04-deploy-osds` | На `{{ srv }}:&osds`: NVMe → 2 namespaces (`osd_nvme_namespace_sizes`), затем `ceph orch apply` OSD-спеков (nvme0n1–7n1 + n2). |
-| `05-post-init` | После init-плейбука группы UNIX: `/etc/hosts`, пользователи/NTP, info по кластеру Ceph, CA (с очисткой старых), SSSD LDAPS, Zabbix, shell prompt. |
+| `05-post-init` | После init-плейбука группы UNIX: `/etc/hosts`, `/etc/ceph/cmdb.ini`, пользователи/NTP, info по кластеру Ceph, CA (с очисткой старых), SSSD LDAPS, Zabbix, shell prompt. |
 | `06-finish-pnr` | Последний шаг подготовки хостов после чеклиста ПНР: продакшен-админы, IPMI, перенос s3-init. |
 | `existing-servers/enable-sssd-tls` | CA-доверие и `ad_use_ldaps` на уже развёрнутых хостах (без полного 05). |
 
@@ -90,7 +90,8 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 | Путь | Назначение |
 |---|---|
 | `group_vars/deployment.yaml` | Из `group_vars/deployment.yaml.sample`: `local_registry`, `ceph_version`, `ubuntu_version` (`20.04`/`24.04`), `seg_fqdn`, `environment_type` и др. Подхватывается для хостов группы `[deployment]`. |
-| `group_vars/etc-hosts` | Из `group_vars/etc-hosts.example`: строки `IP FQDN короткое_имя`. Ставится в 01 и снова в 03. |
+| `group_vars/etc-hosts` | Из `group_vars/etc-hosts.example`: строки `IP FQDN короткое_имя`. Ставится в 01 и снова в 05. |
+| `/etc/ceph/cmdb.ini` | Пишется ролью `cmdb-ini` в 05: `CLUSTER_NAME` ← `cluster_name`; `HOST_REAL_SIZE` ← `fs_cmdb_size` на `[osds]`, иначе `0`. |
 
 ## Файлы в ролях (общие для инвентарей)
 

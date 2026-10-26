@@ -1,0 +1,5 @@
+---
+cmdb_ini_dest: /etc/ceph/cmdb.ini
+cmdb_ini_dir: /etc/ceph
+# Inventory group whose members get fs_cmdb_size; others get HOST_REAL_SIZE=0.
+cmdb_osd_group: osds

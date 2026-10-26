@@ -13,6 +13,8 @@ ceph_version: "19.2.6"
 node_exporter_version: "1.8.2"
 ubuntu_version: "24.04"
 cluster_name: "TEST-EXAMPLE"
+# HOST_REAL_SIZE в /etc/ceph/cmdb.ini для хостов [osds]; на mon/rgw пишется 0
+fs_cmdb_size: "xx.xxx"
 
 # Backend CIDR на первом mon (cephadm). Не public/front-end /27, если это разные сети.
 cluster_network: "0.0.0.0/27"
