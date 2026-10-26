@@ -3,6 +3,7 @@ cluster_actions:
   - init
   - extend
 
-# [vse] lists the servers in the cluster. [new] lists the servers being added.
+# [vse] — все серверы кластера (существующие + добавляемые).
+# [deployment] — хосты текущего прогона: при init = весь кластер, при extend = только новые.
 cluster_members_group: vse
-cluster_extend_group: new
+cluster_work_group: deployment

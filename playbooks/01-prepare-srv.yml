@@ -4,9 +4,9 @@
 # OS-level host preparation (network, packages, tuning, users). No Ceph
 # cluster setup and no cluster_action — that is playbook 02-prepare-ceph.
 #
-#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=vse
-#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=new
+#   ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=deployment
 #
+# [deployment] = hosts for this run (init: whole cluster; extend: new hosts only).
 # /etc/hosts is installed from <inventory_dir>/group_vars/etc-hosts.
 # Copy group_vars/etc-hosts.example there and fill in IP FQDN shortname.
 # Playbook 03 installs the same file again.

@@ -5,16 +5,16 @@
 # users and packages, podman + local registry (init), and bootstraps the
 # cluster on the first [mons] host. Host join / images / OSDs are playbook 03.
 #
-#   [vse]   servers in the cluster
-#   [new]   servers being added, usually a new rack. Omit this group otherwise.
+#   [vse]          all servers in the cluster
+#   [deployment]   hosts for this run (−e srv=deployment)
 # Role groups (mons, osds, s3_services, rack groups, ...) stay as they are.
-# Hosts in [new] may also be listed in [vse], the same way [osds] is.
+# New hosts belong in both [deployment] and [vse], same idea as [osds].
 #
-#   -e srv=vse -e cluster_action=init
-#       New cluster. [new] is absent or empty.
-#   -e srv=new -e cluster_action=extend
-#       Prepare only [new]. Hosts in [vse] but not in [new] are already in
-#       the cluster; this play does not connect to them.
+#   -e srv=deployment -e cluster_action=init
+#       New cluster. [deployment] lists the same hosts as [vse].
+#   -e srv=deployment -e cluster_action=extend
+#       Prepare only [deployment] (new hosts). Hosts in [vse] but not in
+#       [deployment] are already in the cluster; this play does not connect to them.
 #
 # roles/cluster-scope publishes:
 #   cluster_new_hosts        hosts this run prepares
@@ -24,8 +24,8 @@
 # cluster hostname. Tasks that belong to only one action go in
 # roles/cluster-init or roles/cluster-extend.
 #
-#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=vse -e cluster_action=init
-#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=new -e cluster_action=extend
+#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=deployment -e cluster_action=init
+#   ansible-playbook playbooks/02-prepare-ceph.yml -i <inventory> -e srv=deployment -e cluster_action=extend
 #
 # Init: load registry-images/* on the first [mons] host, cephadm bootstrap,
 # then ceph-post-bootstrap (orch/mgr) on that same mon only.

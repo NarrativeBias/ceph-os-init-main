@@ -7,10 +7,10 @@
 # public_networks), wait for crash/node-exporter/ceph-exporter, apply
 # mon/mgr placement. Disk/OSD work is playbook 04-deploy-osds.
 #
-#   [vse] / [new] and cluster_action work the same as playbook 02.
+#   [vse] / [deployment] and cluster_action work the same as playbook 02.
 #
-#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=vse -e cluster_action=init
-#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=new -e cluster_action=extend
+#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=deployment -e cluster_action=init
+#   ansible-playbook playbooks/03-deploy-ceph.yml -i <inventory> -e srv=deployment -e cluster_action=extend
 
 - name: Check how this Ceph deploy run is scoped
   hosts: localhost

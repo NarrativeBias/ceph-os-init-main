@@ -12,34 +12,34 @@ cp group_vars/deployment.yaml.sample <inventory_dir>/group_vars/deployment.yaml 
 cp group_vars/etc-hosts.example <inventory_dir>/group_vars/etc-hosts              # заполнить
 # В этом репозитории: secrets/vault.yml
 # CA: roles/ca-certs/files/{test,dev,prod}/*.crt
-# Ceph: roles/ceph-packages/files/*<ceph_repo_ver>*.deb
+# Ceph: roles/ceph-packages/files/*<ceph_version>*.deb
 #   и для нового кластера registry-images/*.tar.gz
 
-# 1) Только подготовка ОС (без Ceph)
-ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=vse --ask-vault-pass
+# 1) Только подготовка ОС (без Ceph); [deployment] = хосты прогона
+ansible-playbook playbooks/01-prepare-srv.yml -i <inventory> -e srv=deployment --ask-vault-pass
 
-# 2) Новый кластер Ceph
-ansible-playbook playbooks/01-prepare-srv.yml   -i <inventory> -e srv=vse --ask-vault-pass
-ansible-playbook playbooks/02-prepare-ceph.yml  -i <inventory> -e srv=vse -e cluster_action=init --ask-vault-pass
+# 2) Новый кластер Ceph ([deployment] = весь [vse])
+ansible-playbook playbooks/01-prepare-srv.yml   -i <inventory> -e srv=deployment --ask-vault-pass
+ansible-playbook playbooks/02-prepare-ceph.yml  -i <inventory> -e srv=deployment -e cluster_action=init --ask-vault-pass
 # (02: registry + cephadm bootstrap + post-bootstrap on the first mon)
-ansible-playbook playbooks/03-deploy-ceph.yml   -i <inventory> -e srv=vse -e cluster_action=init --ask-vault-pass
+ansible-playbook playbooks/03-deploy-ceph.yml   -i <inventory> -e srv=deployment -e cluster_action=init --ask-vault-pass
 # (03: images/keys, host add, agents, mon/mgr)
-ansible-playbook playbooks/04-deploy-osds.yml   -i <inventory> -e srv=vse -e cluster_action=init --ask-vault-pass
+ansible-playbook playbooks/04-deploy-osds.yml   -i <inventory> -e srv=deployment -e cluster_action=init --ask-vault-pass
 # (04: NVMe namespaces on [osds]; later OSD deploy)
 # … init-плейбук группы UNIX (вне этого репозитория) …
-ansible-playbook playbooks/05-post-init.yml     -i <inventory> -e srv=vse --ask-vault-pass
+ansible-playbook playbooks/05-post-init.yml     -i <inventory> -e srv=deployment --ask-vault-pass
 # … чеклист ПНР …
-ansible-playbook playbooks/06-finish-pnr.yml    -i <inventory> -e srv=vse --ask-vault-pass
+ansible-playbook playbooks/06-finish-pnr.yml    -i <inventory> -e srv=deployment --ask-vault-pass
 
-# 3) Расширение кластера (новые хосты в [new])
-ansible-playbook playbooks/01-prepare-srv.yml   -i <inventory> -e srv=new --ask-vault-pass
-ansible-playbook playbooks/02-prepare-ceph.yml  -i <inventory> -e srv=new -e cluster_action=extend --ask-vault-pass
-ansible-playbook playbooks/03-deploy-ceph.yml   -i <inventory> -e srv=new -e cluster_action=extend --ask-vault-pass
-ansible-playbook playbooks/04-deploy-osds.yml   -i <inventory> -e srv=new -e cluster_action=extend --ask-vault-pass
+# 3) Расширение ([deployment] = только новые; они же в [vse] вместе со старыми)
+ansible-playbook playbooks/01-prepare-srv.yml   -i <inventory> -e srv=deployment --ask-vault-pass
+ansible-playbook playbooks/02-prepare-ceph.yml  -i <inventory> -e srv=deployment -e cluster_action=extend --ask-vault-pass
+ansible-playbook playbooks/03-deploy-ceph.yml   -i <inventory> -e srv=deployment -e cluster_action=extend --ask-vault-pass
+ansible-playbook playbooks/04-deploy-osds.yml   -i <inventory> -e srv=deployment -e cluster_action=extend --ask-vault-pass
 # … init-плейбук группы UNIX (вне этого репозитория) …
-ansible-playbook playbooks/05-post-init.yml     -i <inventory> -e srv=new --ask-vault-pass
+ansible-playbook playbooks/05-post-init.yml     -i <inventory> -e srv=deployment --ask-vault-pass
 # … чеклист ПНР …
-ansible-playbook playbooks/06-finish-pnr.yml    -i <inventory> -e srv=new --ask-vault-pass
+ansible-playbook playbooks/06-finish-pnr.yml    -i <inventory> -e srv=deployment --ask-vault-pass
 
 # 4) Уже развёрнутые хосты: только CA + SSSD LDAPS
 ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -e srv=<group> --ask-vault-pass
@@ -72,16 +72,16 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 ## Инвентарь и группы
 
-Нужен **один файл инвентаря** (при init он копируется на первый mon).
+Нужен **один файл инвентаря** (при init он копируется на первый mon). Целевой прогон всегда: `-e srv=deployment`.
 
 | Группа | Назначение |
 |---|---|
-| `[vse]` | Все серверы кластера. |
-| `[new]` | Добавляемые хосты (обычно новая стойка). При init отсутствует или пуста. Может также входить в `[vse]`. |
+| `[deployment]` | Хосты **текущего** прогона (и получатели `group_vars/deployment.yaml`). Init → те же, что `[vse]`; extend → только добавляемые. |
+| `[vse]` | Все серверы кластера (при extend — старые + новые). |
 | `[mons]`, `[osds]`, … | Ролевые группы. Первый хост в `[mons]` (порядок в инвентаре) — Ansible-контроллер кластера и хост локального registry при init. |
 
-- **Init:** `-e srv=vse -e cluster_action=init` — группа `[new]` должна отсутствовать или быть пустой.
-- **Extend:** `-e srv=new -e cluster_action=extend` — плейбук ходит только в `[new]`; уже работающие члены `[vse]` (не из `[new]`) не трогаются.
+- **Init:** `-e srv=deployment -e cluster_action=init` — `[deployment]` и `[vse]` совпадают (весь кластер).
+- **Extend:** `-e srv=deployment -e cluster_action=extend` — в `[deployment]` только новые; они же перечислены в `[vse]` вместе с уже работающими. Плейбук к существующим (в `[vse]`, но не в `[deployment]`) не ходит.
 
 `roles/cluster-scope` проверяет это на контроллере до подключения к серверам и публикует `cluster_new_hosts`, `cluster_existing_hosts`, `cluster_hosts` для ролей, которым нужен полный список имён.
 
@@ -89,7 +89,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 | Путь | Назначение |
 |---|---|
-| `group_vars/deployment.yaml` | Из `group_vars/deployment.yaml.sample`: `local_registry`, `ceph_repo_ver`, `ubuntu_version` (`20.04`/`24.04`), `seg_fqdn`, `environment_type` и др. Только для группы `[deployment]`. |
+| `group_vars/deployment.yaml` | Из `group_vars/deployment.yaml.sample`: `local_registry`, `ceph_version`, `ubuntu_version` (`20.04`/`24.04`), `seg_fqdn`, `environment_type` и др. Подхватывается для хостов группы `[deployment]`. |
 | `group_vars/etc-hosts` | Из `group_vars/etc-hosts.example`: строки `IP FQDN короткое_имя`. Ставится в 01 и снова в 03. |
 
 ## Файлы в ролях (общие для инвентарей)
@@ -99,7 +99,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 | `roles/ca-certs/files/test/*.crt` | Цепочка CA для `test.vtb.ru`. |
 | `roles/ca-certs/files/dev/*.crt` | Цепочка CA для `corp.dev.vtb`. |
 | `roles/ca-certs/files/prod/*.crt` | Цепочка CA для `cde.vtb`, `inet.vtb`, `cn-*.vtb`, `region.vtb.ru`, `vtbgroup.vtb.com`. |
-| `roles/ceph-packages/files/cephadm_*<ceph_repo_ver>*_amd64.deb` | Локальный `cephadm` (например `cephadm_20.2.4-1noble_amd64.deb`); выбор по `ceph_repo_ver`. |
+| `roles/ceph-packages/files/cephadm_*<ceph_version>*_amd64.deb` | Локальный `cephadm` (например `cephadm_20.2.4-1noble_amd64.deb`); выбор по `ceph_version`. |
 | `roles/podman/files/podman-pkgs/*.deb` | (только 20.04) набор podman 3.4.2 + deps; на 24.04 podman из apt. |
 | `registry-images/*.{tar.gz,tar.zst}` | (корень репо) архивы образов для registry на первом mon при **02** (см. `registry-images/README`). |
 
@@ -113,7 +113,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 ## Типы окружения
 
-`environment_type` — `DEV`/`TEST`/`PROD`. Preflight проверяет `ubuntu_version` (и совпадение с хостом), совместимость `ceph_repo_ver` с ОС, обязательные group_vars/vault и (без `force=yes`) отсутствие учёток администратора из плейбука 06.
+`environment_type` — `DEV`/`TEST`/`PROD`. Preflight проверяет `ubuntu_version` (и совпадение с хостом), совместимость `ceph_version` с ОС, обязательные group_vars/vault и (без `force=yes`) отсутствие учёток администратора из плейбука 06.
 
 Матрица Ceph ↔ ОС: **17.2.6 / 18.2.7 → 20.04**; **19.2.6 / 20.2.4 → 24.04** (проверка по префиксу major: `17.`/`18.` vs `19.`/`20.`).
 

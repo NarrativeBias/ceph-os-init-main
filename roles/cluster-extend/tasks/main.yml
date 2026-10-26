@@ -2,7 +2,7 @@
 # Tasks that run only when cluster_action=extend.
 # A task that runs for both actions and needs every cluster hostname
 # belongs in its own role and should loop over cluster_hosts.
-# Hosts in [vse] that are not in [new] are not part of this play.
+# Hosts in [vse] that are not in [deployment] are not part of this play.
 
 - name: extend-only scope is active
   ansible.builtin.debug:

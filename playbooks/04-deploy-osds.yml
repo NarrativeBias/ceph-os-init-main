@@ -5,8 +5,8 @@
 # into two namespaces, then ceph orch apply per-host OSD specs (same shape
 # as the old nvme OSD spec helper; hosts come from inventory).
 #
-#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=vse -e cluster_action=init
-#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=new -e cluster_action=extend
+#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=deployment -e cluster_action=init
+#   ansible-playbook playbooks/04-deploy-osds.yml -i <inventory> -e srv=deployment -e cluster_action=extend
 
 - name: Check how this OSD deploy run is scoped
   hosts: localhost

@@ -1,5 +1,5 @@
 ---
 # Runs on the first mon after bootstrap + image pulls.
-ceph_post_bootstrap_node_exporter_image: "{{ local_registry }}/prom/node-exporter:v{{ node_exporter_ver }}"
+ceph_post_bootstrap_node_exporter_image: "{{ local_registry }}/prom/node-exporter:v{{ node_exporter_version }}"
 # Comma-separated public_network value for ceph config (from group_vars list)
 ceph_post_bootstrap_public_network: "{{ public_networks | join(',') }}"

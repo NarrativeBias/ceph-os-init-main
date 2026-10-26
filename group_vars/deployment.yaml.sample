@@ -1,11 +1,16 @@
 # Скопировать в group_vars/deployment.yaml рядом с инвентарём.
-# Нужна группа [deployment] в инвентаре (Ansible подхватывает group_vars/<группа>.yaml по имени).
+# Ansible подхватывает файл по имени группы [deployment].
+#
+# [deployment] — хосты текущего прогона (-e srv=deployment):
+#   init   → те же хосты, что в [vse] (весь кластер)
+#   extend → только добавляемые (они же должны быть и в [vse])
 #
 # Ceph ↔ ОС: 17.2.6|18.2.7 → 20.04; 19.2.6|20.2.4 → 24.04
+# ubuntu_codename выводится из ubuntu_version (20.04→focal, 24.04→noble).
 
 local_registry: "d5example-mo5001lp.corp.dev.vtb:5000"
-ceph_repo_ver: "19.2.6"
-node_exporter_ver: "1.8.2"
+ceph_version: "19.2.6"
+node_exporter_version: "1.8.2"
 ubuntu_version: "24.04"
 cluster_name: "TEST-EXAMPLE"
 

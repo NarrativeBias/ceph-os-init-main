@@ -1,5 +1,5 @@
 ---
-- name: discover cephadm package for ceph_repo_ver on controller
+- name: discover cephadm package for ceph_version on controller
   ansible.builtin.find:
     paths: "{{ cephadm_packages_dir }}"
     patterns:
@@ -16,7 +16,7 @@
       - cephadm_deb_files.matched | int == 1
     fail_msg: >-
       Expected exactly one package matching '{{ cephadm_package_pattern }}'
-      in {{ cephadm_packages_dir }}/ (ceph_repo_ver={{ ceph_repo_ver }}).
+      in {{ cephadm_packages_dir }}/ (ceph_version={{ ceph_version }}).
       Found {{ cephadm_deb_files.matched | int }}:
       {{ cephadm_deb_files.files | map(attribute='path') | map('basename') | list | join(', ') | default('(none)') }}.
   run_once: true
@@ -33,7 +33,7 @@
     cephadm_needs_install: >-
       {{
         cephadm_dpkg.rc != 0
-        or ceph_repo_ver not in (cephadm_dpkg.stdout | default(''))
+        or ceph_version not in (cephadm_dpkg.stdout | default(''))
       }}
 
 - name: stage cephadm package on host

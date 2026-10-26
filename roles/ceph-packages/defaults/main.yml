@@ -5,7 +5,7 @@
 #   roles/ceph-packages/files/cephadm_19.2.6-1noble_amd64.deb
 #   roles/ceph-packages/files/cephadm_18.2.7-1focal_amd64.deb
 #   roles/ceph-packages/files/cephadm_17.2.6-1focal_amd64.deb
-# Selection uses ceph_repo_ver from group_vars (substring match).
+# Selection uses ceph_version from group_vars (substring match).
 cephadm_packages_dir: "{{ role_path }}/files"
-cephadm_package_pattern: "*{{ ceph_repo_ver }}*.deb"
+cephadm_package_pattern: "*{{ ceph_version }}*.deb"
 cephadm_remote_deb: /var/tmp/cephadm-install.deb
