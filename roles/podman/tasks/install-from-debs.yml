@@ -1,0 +1,81 @@
+---
+# Ubuntu 20.04: podman 3.4.2 + deps from roles/podman/files/podman-pkgs/*.deb
+
+- name: install podman shared library deps from apt
+  ansible.builtin.apt:
+    name: "{{ podman_focal_apt_deps }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: check whether podman is already installed
+  ansible.builtin.command:
+    argv:
+      - dpkg-query
+      - -W
+      - podman
+  register: podman_dpkg
+  changed_when: false
+  failed_when: false
+
+- name: require local podman package directory
+  ansible.builtin.stat:
+    path: "{{ podman_local_pkgs_dir }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: podman_pkgs_dir_stat
+  when: podman_dpkg.rc != 0
+
+- name: find local podman .deb packages
+  ansible.builtin.find:
+    paths: "{{ podman_local_pkgs_dir }}"
+    patterns: "*.deb"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: podman_local_debs
+  when: podman_dpkg.rc != 0
+
+- name: require podman .deb packages on the controller
+  ansible.builtin.assert:
+    that:
+      - podman_pkgs_dir_stat.stat.exists | default(false)
+      - podman_local_debs.files | default([]) | length > 0
+    fail_msg: >-
+      Ubuntu 20.04 needs local podman debs in {{ podman_local_pkgs_dir }}/
+      (e.g. podman_3.4.2-1_amd64.deb and its companions). See README there.
+  when: podman_dpkg.rc != 0
+  run_once: true
+
+- name: create podman package staging directory
+  ansible.builtin.file:
+    path: "{{ podman_local_stage }}"
+    state: directory
+    mode: "0755"
+  when: podman_dpkg.rc != 0
+
+- name: stage podman packages on the host
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ podman_local_stage }}/"
+    mode: "0644"
+  loop: "{{ podman_local_debs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: podman_dpkg.rc != 0
+
+- name: install podman from staged debs
+  ansible.builtin.shell: |
+    set -euo pipefail
+    dpkg -i {{ podman_local_stage }}/*.deb
+  args:
+    executable: /bin/bash
+  when: podman_dpkg.rc != 0
+  changed_when: true
+
+- name: remove staged podman packages
+  ansible.builtin.file:
+    path: "{{ podman_local_stage }}"
+    state: absent
+  when: podman_dpkg.rc != 0

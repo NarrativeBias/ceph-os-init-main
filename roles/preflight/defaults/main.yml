@@ -4,16 +4,32 @@ supported_environment_types:
   - TEST
   - PROD
 
-# Local admin created by roles/production-users in playbook 03.
+# Local admin created by roles/production-users in playbook 06.
 production_admin_users:
   PROD: psadm
   TEST: tsadm
   DEV: dsadm
 
+# Set ubuntu_version in group_vars (e.g. "24.04"); codename is derived.
+ubuntu_version_codenames:
+  "20.04": focal
+  "24.04": noble
+
+# Allowed ceph_repo_ver prefixes per OS (blocks old Ceph on new OS and vice versa).
+# In use: 17.2.6 / 18.2.7 → 20.04; 19.2.6 / 20.2.4 → 24.04.
+ubuntu_ceph_compat:
+  "20.04":
+    - "17."
+    - "18."
+  "24.04":
+    - "19."
+    - "20."
+
 # Always required (group_vars / vault)
 preflight_required_vars:
   - local_registry
   - ceph_repo_ver
+  - ubuntu_version
   - environment_type
   - dns_ip
   - seg_fqdn

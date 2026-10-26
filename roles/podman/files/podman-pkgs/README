@@ -1,0 +1,17 @@
+Ubuntu 20.04 local podman packages (not from apt).
+
+Place the amd64 .deb set used with podman 3.4.2 here, for example:
+
+  catatonit_*.deb
+  conmon_*.deb
+  containernetworking-plugins_*.deb
+  containers-common_*.deb
+  criu_*.deb
+  crun_*.deb
+  podman-machine-cni_*.deb
+  podman-plugins_*.deb
+  podman_3.4.2-*.deb
+  slirp4netns_*.deb
+
+Playbook 02 role podman installs these via dpkg when ubuntu_version=20.04.
+Ubuntu 24.04 installs podman from apt instead; this directory is ignored.

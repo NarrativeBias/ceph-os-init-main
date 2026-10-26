@@ -1,20 +1,21 @@
-# Copy to group_vars/deployment.yaml next to the inventory and replace the example values.
-# Requires an inventory group named [deployment] (or use as vars_files) — Ansible only
-# auto-loads group_vars/<group_name>.yaml for matching groups.
+# Скопировать в group_vars/deployment.yaml рядом с инвентарём.
+# Нужна группа [deployment] в инвентаре (Ansible подхватывает group_vars/<группа>.yaml по имени).
+#
+# Ceph ↔ ОС: 17.2.6|18.2.7 → 20.04; 19.2.6|20.2.4 → 24.04
+
 local_registry: "d5example-mo5001lp.corp.dev.vtb:5000"
-# Ceph version: selects roles/ceph-packages/files/*<ver>*.deb and container tags
-ceph_repo_ver: "19.2.1"
+ceph_repo_ver: "19.2.6"
 node_exporter_ver: "1.8.2"
-# Target OS: Ubuntu 24.04 (noble)
-ubuntu_codename: noble
+ubuntu_version: "24.04"
 cluster_name: "TEST-EXAMPLE"
-# Ceph cluster network (CIDR), used by cephadm bootstrap on the first mon
+
+# Backend CIDR на первом mon (cephadm). Не public/front-end /27, если это разные сети.
 cluster_network: "0.0.0.0/27"
-# Public networks: one /27 CIDR per rack (comma-joined into ceph public_network)
+
+# По одному /27 на стойку → через запятую в ceph public_network
 public_networks:
   - "0.0.0.0/27"
   # - "0.0.0.32/27"
 
-
-# Image archives for playbook 02 (*.{tar.gz,tar.zst}). Default = <repo>/registry-images
+# Архивы образов для плейбука 02 (*.{tar.gz,tar.zst}); по умолчанию = <repo>/registry-images
 registry_images_dir: "{{ playbook_dir }}/../registry-images"

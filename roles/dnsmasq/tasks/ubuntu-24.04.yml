@@ -1,0 +1,60 @@
+---
+# 24.04: disable resolved first; IGNORE_RESOLVCONF avoids dual resolv sources with no-poll.
+
+- name: disable systemd-resolved (24.04)
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+
+- name: ignore resolvconf integration for dnsmasq (24.04)
+  ansible.builtin.lineinfile:
+    path: /etc/default/dnsmasq
+    regexp: '^#?IGNORE_RESOLVCONF='
+    line: IGNORE_RESOLVCONF=yes
+    create: true
+  notify: restart dnsmasq
+
+- name: configure dnsmasq (24.04)
+  ansible.builtin.template:
+    src: dnsmasq.conf-24.04.j2
+    dest: /etc/dnsmasq.conf
+    mode: "0644"
+    owner: root
+    group: root
+  notify: restart dnsmasq
+
+- name: create resolv.dnsmasq with upstream DNS (24.04)
+  ansible.builtin.copy:
+    dest: /etc/resolv.dnsmasq
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      nameserver {{ dns_ip }}
+  notify: restart dnsmasq
+
+- name: check if resolv.conf is a symlink (24.04)
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: resolv_conf_stat
+
+- name: remove resolv.conf symlink (24.04)
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: resolv_conf_stat.stat.islnk | default(false)
+
+- name: point OS resolver at local dnsmasq (24.04)
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: enable and start dnsmasq (24.04)
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: started
+    enabled: true

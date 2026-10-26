@@ -1,0 +1,10 @@
+---
+# Local .deb set for Ubuntu 20.04 (podman 3.4.2 + deps). Not used on 24.04.
+podman_local_pkgs_dir: "{{ role_path }}/files/podman-pkgs"
+podman_local_stage: /var/tmp/podman-pkgs
+podman_focal_apt_deps:
+  - libnet1
+  - libprotobuf-c1
+  - libprotobuf17
+  - libyajl2
+  - python3-protobuf

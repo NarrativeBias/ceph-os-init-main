@@ -12,14 +12,21 @@ ExecStart=/usr/bin/podman run \
   --cidfile=%t/%n.ctr-id \
   --cgroups=no-conmon \
   --sdnotify=conmon \
+{% if ubuntu_version | string != '20.04' %}
   --replace \
+{% endif %}
   --detach \
   --name registry \
   --net host \
   -v registry:/var/lib/registry \
   {{ registry_container_image }}
+{% if ubuntu_version | string == '20.04' %}
+ExecStop=/usr/bin/podman stop --cidfile=%t/%n.ctr-id
+ExecStopPost=/usr/bin/podman rm -f --cidfile=%t/%n.ctr-id
+{% else %}
 ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/%n.ctr-id
 ExecStopPost=/usr/bin/podman rm -f --ignore --cidfile=%t/%n.ctr-id
+{% endif %}
 Type=notify
 NotifyAccess=all
 

@@ -1,6 +1,6 @@
 # ceph-os-init
 
-Ansible-плейбуки для подготовки серверов Ubuntu 24.04 по нашим стандартам и практикам c возможностью дальнейшего деплоя Ceph на них.
+Ansible-плейбуки для подготовки серверов Ubuntu 20.04/24.04 по нашим стандартам и практикам c возможностью дальнейшего деплоя Ceph на них.
 
 ## Использование
 
@@ -55,7 +55,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 Репозиторий решает две связанные, но разные задачи:
 
-1. **Подготовка хостов** — привести Ubuntu **24.04 (noble)** к принятым у нас стандартам: сеть, репозитории, пакеты, NTP, тюнинг ОС, пользователи и т.п. Для этого достаточно `01-prepare-srv`; Ceph при этом ставить не обязательно.
+1. **Подготовка хостов** — Ubuntu **20.04 (focal)** или **24.04 (noble)** (`ubuntu_version` в deployment.yaml; кодовое имя выводится автоматически): сеть, репозитории, пакеты, NTP, тюнинг ОС, пользователи. Для этого достаточно `01-prepare-srv`; Ceph при этом ставить не обязательно.
 2. **Развёртывание Ceph** — bootstrap (`02`), join/агенты/mon/mgr (`03`), диски/OSD (`04`). Дальше — внешний init группы UNIX, наш `05-post-init`, чеклист ПНР и финальный `06-finish-pnr`.
 
 | Плейбук | Назначение |
@@ -89,7 +89,7 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 | Путь | Назначение |
 |---|---|
-| `group_vars/deployment.yaml` | Из `group_vars/deployment.yaml.sample`: `local_registry`, `ceph_repo_ver`, `seg_fqdn`, `environment_type` и др. Ansible подхватывает файл только для группы `[deployment]`. |
+| `group_vars/deployment.yaml` | Из `group_vars/deployment.yaml.sample`: `local_registry`, `ceph_repo_ver`, `ubuntu_version` (`20.04`/`24.04`), `seg_fqdn`, `environment_type` и др. Только для группы `[deployment]`. |
 | `group_vars/etc-hosts` | Из `group_vars/etc-hosts.example`: строки `IP FQDN короткое_имя`. Ставится в 01 и снова в 03. |
 
 ## Файлы в ролях (общие для инвентарей)
@@ -99,7 +99,8 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 | `roles/ca-certs/files/test/*.crt` | Цепочка CA для `test.vtb.ru`. |
 | `roles/ca-certs/files/dev/*.crt` | Цепочка CA для `corp.dev.vtb`. |
 | `roles/ca-certs/files/prod/*.crt` | Цепочка CA для `cde.vtb`, `inet.vtb`, `cn-*.vtb`, `region.vtb.ru`, `vtbgroup.vtb.com`. |
-| `roles/ceph-packages/files/*<ceph_repo_ver>*.deb` | Локальные пакеты `cephadm`; выбирается ровно один файл под `ceph_repo_ver`. |
+| `roles/ceph-packages/files/cephadm_*<ceph_repo_ver>*_amd64.deb` | Локальный `cephadm` (например `cephadm_20.2.4-1noble_amd64.deb`); выбор по `ceph_repo_ver`. |
+| `roles/podman/files/podman-pkgs/*.deb` | (только 20.04) набор podman 3.4.2 + deps; на 24.04 podman из apt. |
 | `registry-images/*.{tar.gz,tar.zst}` | (корень репо) архивы образов для registry на первом mon при **02** (см. `registry-images/README`). |
 
 `seg_fqdn` выбирает AD-домен и какой набор CA ставится. Публичные CA лучше хранить как обычный PEM; если vault-зашифрованы — тот же пароль, что при шифровании.
@@ -112,7 +113,9 @@ ansible-playbook playbooks/existing-servers/enable-sssd-tls.yml -i <inventory> -
 
 ## Типы окружения
 
-`environment_type` — одно из `DEV`, `TEST`, `PROD`. Preflight проверяет ОС (Ubuntu noble), обязательные переменные group_vars/vault и (без `force=yes`) отсутствие на хостах текущего плейа учёток администратора из плейбука 06.
+`environment_type` — `DEV`/`TEST`/`PROD`. Preflight проверяет `ubuntu_version` (и совпадение с хостом), совместимость `ceph_repo_ver` с ОС, обязательные group_vars/vault и (без `force=yes`) отсутствие учёток администратора из плейбука 06.
+
+Матрица Ceph ↔ ОС: **17.2.6 / 18.2.7 → 20.04**; **19.2.6 / 20.2.4 → 24.04** (проверка по префиксу major: `17.`/`18.` vs `19.`/`20.`).
 
 ## Теги
 

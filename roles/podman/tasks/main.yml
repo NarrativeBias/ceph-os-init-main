@@ -1,12 +1,20 @@
-- name: install podman
-  apt:
-    name: podman
-    state: present
+---
+# Install path differs by OS; registry/TZ config is shared afterward.
 
-- name: configure insecure registry
-  copy:
+- name: install podman from local debs (Ubuntu 20.04)
+  ansible.builtin.import_tasks: install-from-debs.yml
+  when: ubuntu_version | string == '20.04'
+  tags: [ubuntu-20.04, podman]
+
+- name: install podman from apt (Ubuntu 24.04)
+  ansible.builtin.import_tasks: install-from-apt.yml
+  when: ubuntu_version | string == '24.04'
+  tags: [ubuntu-24.04, podman]
+
+- name: configure insecure registry drop-in
+  ansible.builtin.copy:
     dest: /etc/containers/registries.conf.d/ceph.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     content: |
@@ -14,10 +22,24 @@
       location = "{{ local_registry }}"
       insecure = true
 
+# Focal/podman 3.4.2: also set unqualified search on the main registries.conf
+# (legacy 20.04 playbook). Noble keeps drop-in only.
+- name: configure unqualified search registries (Ubuntu 20.04)
+  ansible.builtin.copy:
+    dest: /etc/containers/registries.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      unqualified-search-registries = ["{{ local_registry }}"]
+      insecure = true
+  when: ubuntu_version | string == '20.04'
+  tags: [ubuntu-20.04, podman]
+
 - name: configure TZ for podman
-  copy:
+  ansible.builtin.copy:
     dest: /etc/containers/containers.conf
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
     content: |

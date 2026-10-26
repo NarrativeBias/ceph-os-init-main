@@ -1,0 +1,54 @@
+---
+# Legacy 20.04 order: configure + start dnsmasq, then disable resolved, then resolv.conf.
+# conf-dir uses the older ignore-suffix form (no IGNORE_RESOLVCONF).
+
+- name: configure dnsmasq (20.04)
+  ansible.builtin.template:
+    src: dnsmasq.conf-20.04.j2
+    dest: /etc/dnsmasq.conf
+    mode: "0644"
+    owner: root
+    group: root
+  notify: restart dnsmasq
+
+- name: create resolv.dnsmasq with upstream DNS (20.04)
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.dnsmasq
+    line: "nameserver {{ dns_ip }}"
+    create: true
+    mode: "0644"
+    owner: root
+    group: root
+  notify: restart dnsmasq
+
+- name: enable and start dnsmasq (20.04)
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: disable systemd-resolved (20.04)
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+
+- name: check if resolv.conf is a symlink (20.04)
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: resolv_conf_stat
+
+- name: remove resolv.conf symlink (20.04)
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: resolv_conf_stat.stat.islnk | default(false)
+
+- name: point OS resolver at local dnsmasq (20.04)
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    mode: "0644"
+    owner: root
+    group: root

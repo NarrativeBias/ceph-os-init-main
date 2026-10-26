@@ -1,12 +1,41 @@
 ---
+- name: require ubuntu_version
+  ansible.builtin.assert:
+    that:
+      - ubuntu_version is defined
+      - ubuntu_version | string in ubuntu_version_codenames
+    fail_msg: >-
+      ubuntu_version must be one of {{ ubuntu_version_codenames.keys() | list | join(', ') }}
+      (got '{{ ubuntu_version | default('undefined') }}').
+  run_once: true
+
+- name: derive ubuntu_codename from ubuntu_version
+  ansible.builtin.set_fact:
+    ubuntu_codename: "{{ ubuntu_version_codenames[ubuntu_version | string] }}"
+
 - name: validating Ubuntu release
   ansible.builtin.assert:
     that:
       - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version is version(ubuntu_version | string, '=')
       - ansible_distribution_release == ubuntu_codename
     fail_msg: >-
-      Unsupported OS '{{ ansible_distribution }} {{ ansible_distribution_release }}'.
-      Required: Ubuntu {{ ubuntu_codename }} (24.04).
+      Unsupported OS '{{ ansible_distribution }} {{ ansible_distribution_version }}
+      ({{ ansible_distribution_release }})'.
+      Required: Ubuntu {{ ubuntu_version }} ({{ ubuntu_codename }}).
+
+- name: require ceph_repo_ver compatible with ubuntu_version
+  ansible.builtin.assert:
+    that:
+      - ubuntu_version | string in ubuntu_ceph_compat
+      - >-
+        ceph_repo_ver | string is match(
+          '^(' ~ (ubuntu_ceph_compat[ubuntu_version | string] | map('regex_escape') | join('|')) ~ ')'
+        )
+    fail_msg: >-
+      ceph_repo_ver '{{ ceph_repo_ver }}' is not allowed on Ubuntu {{ ubuntu_version }}.
+      Allowed prefixes: {{ ubuntu_ceph_compat[ubuntu_version | string] | join(', ') }}.
+  run_once: true
 
 - name: validating environment_type
   ansible.builtin.assert:

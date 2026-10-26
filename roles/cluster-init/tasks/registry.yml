@@ -46,12 +46,23 @@
 - name: deploy the local registry on the first mon
   when: inventory_hostname == groups['mons'][0]
   block:
-    - name: install podman on the first mon
+    - name: install podman on the first mon (Ubuntu 24.04)
       ansible.builtin.apt:
         name: podman
         state: present
         update_cache: true
         cache_valid_time: 3600
+      when: ubuntu_version | string == '24.04'
+      tags: [ubuntu-24.04]
+
+    - name: require podman already installed (Ubuntu 20.04)
+      ansible.builtin.command:
+        argv:
+          - podman
+          - --version
+      changed_when: false
+      when: ubuntu_version | string == '20.04'
+      tags: [ubuntu-20.04]
 
     - name: require the podman role insecure registry config
       ansible.builtin.stat:
